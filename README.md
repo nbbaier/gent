@@ -1,1 +1,1 @@
-Placeholder repo for a skill management tool
+Squib repo for a agent skills management tool
