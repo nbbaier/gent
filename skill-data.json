@@ -1,0 +1,149 @@
+[
+  {
+    "tool": "Amp",
+    "source": "https://ampcode.com/manual#agent-skills",
+    "project_search_path": [
+      ".agents/skills/",
+      ".claude/skills/"
+    ],
+    "global_search_path": [
+      "~/.config/agents/skills/",
+      "~/.config/amp/skills/",
+      "~/.claude/skills/"
+    ],
+    "notes": "Full precedence (first wins): ~/.config/agents/skills/, ~/.config/amp/skills/, .agents/skills/, .claude/skills/, ~/.claude/skills/, then plugins, legacy toolbox directories, and built-in skills."
+  },
+  {
+    "tool": "Augment (Auggie CLI)",
+    "source": "https://docs.augmentcode.com/cli/skills#skill-locations",
+    "project_search_path": [
+      "<workspace>/.augment/skills/",
+      "<workspace>/.claude/skills/",
+      "<workspace>/.agents/skills/"
+    ],
+    "global_search_path": [
+      "~/.augment/skills/",
+      "~/.claude/skills/",
+      "~/.agents/skills/"
+    ],
+    "notes": "User (home directory) locations have higher precedence than workspace locations. Skills from all locations are loaded; when names conflict, the higher-precedence location wins."
+  },
+  {
+    "tool": "Claude Code",
+    "source": "https://code.claude.com/docs/en/skills#where-skills-live",
+    "project_search_path": [
+      ".claude/skills/<skill-name>/SKILL.md"
+    ],
+    "global_search_path": [
+      "~/.claude/skills/<skill-name>/SKILL.md"
+    ],
+    "notes": "Also supports enterprise and plugin scopes. Same-name precedence is enterprise > personal > project. Plugin skills are namespaced (plugin-name:skill-name) so they cannot conflict. Project skills also load from .claude/skills/ in every parent directory up to the repository root."
+  },
+  {
+    "tool": "OpenAI Codex",
+    "source": "https://developers.openai.com/codex/skills#where-to-save-skills",
+    "project_search_path": [
+      "$CWD/.agents/skills",
+      "$CWD/../.agents/skills",
+      "$REPO_ROOT/.agents/skills"
+    ],
+    "global_search_path": [
+      "$HOME/.agents/skills",
+      "/etc/codex/skills",
+      "bundled system skills"
+    ],
+    "notes": "Scopes are REPO, USER, ADMIN (/etc/codex/skills), and SYSTEM (bundled with Codex). For repositories, Codex scans .agents/skills in every directory from the current working directory up to the repository root."
+  },
+  {
+    "tool": "Crush",
+    "source": "https://github.com/charmbracelet/crush#agent-skills",
+    "project_search_path": [
+      ".crush/skills/"
+    ],
+    "global_search_path": [
+      "~/.config/crush/skills/",
+      "~/.config/agents/skills/"
+    ],
+    "notes": "Project-local .crush/skills/ is prepended before the global default. The global default skills directory can be overridden via the CRUSH_SKILLS_DIR environment variable. On Windows the global paths are %LOCALAPPDATA%\\crush\\skills\\ and %LOCALAPPDATA%\\agents\\skills\\."
+  },
+  {
+    "tool": "Cursor",
+    "source": "https://cursor.com/docs/skills#skill-directories",
+    "project_search_path": [
+      ".agents/skills/",
+      ".cursor/skills/"
+    ],
+    "global_search_path": [
+      "~/.agents/skills/",
+      "~/.cursor/skills/"
+    ],
+    "notes": "Also reads legacy compatibility directories: .claude/skills/ and .codex/skills/ (project), and ~/.claude/skills/ and ~/.codex/skills/ (global). Skills are not currently discovered outside the root .cursor/skills directory in monorepos."
+  },
+  {
+    "tool": "Factory CLI",
+    "source": "https://docs.factory.ai/cli/configuration/skills#where-skills-live",
+    "project_search_path": [
+      "<repo>/.factory/skills/",
+      "<repo>/.agent/skills/"
+    ],
+    "global_search_path": [
+      "~/.factory/skills/"
+    ],
+    "notes": "<repo>/.agent/skills/ is a compatibility location discovered for the .agent folder convention. Each skill lives in its own directory containing a SKILL.md."
+  },
+  {
+    "tool": "Gemini CLI",
+    "source": "https://geminicli.com/docs/cli/using-agent-skills/#discovery-tiers",
+    "project_search_path": [
+      ".agents/skills/",
+      ".gemini/skills/"
+    ],
+    "global_search_path": [
+      "~/.agents/skills/",
+      "~/.gemini/skills/"
+    ],
+    "notes": "Full precedence (lowest to highest): built-in skills, extension skills, user skills, workspace skills. Within the same tier (user or workspace), the .agents/skills/ alias takes precedence over the .gemini/skills/ directory."
+  },
+  {
+    "tool": "GitHub Copilot (cloud agent)",
+    "source": "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-cloud-agent/add-skills#creating-and-adding-a-skill",
+    "project_search_path": [
+      ".github/skills",
+      ".claude/skills",
+      ".agents/skills"
+    ],
+    "global_search_path": [
+      "~/.copilot/skills",
+      "~/.agents/skills"
+    ],
+    "notes": "Project skills are stored in the repository; personal skills are stored in the home directory and shared across projects."
+  },
+  {
+    "tool": "OpenCode",
+    "source": "https://opencode.ai/docs/skills/#place-files",
+    "project_search_path": [
+      ".opencode/skills/<name>/SKILL.md",
+      ".claude/skills/<name>/SKILL.md",
+      ".agents/skills/<name>/SKILL.md"
+    ],
+    "global_search_path": [
+      "~/.config/opencode/skills/<name>/SKILL.md",
+      "~/.claude/skills/<name>/SKILL.md",
+      "~/.agents/skills/<name>/SKILL.md"
+    ],
+    "notes": ".claude/skills/ and .agents/skills/ directories are supported for compatibility with Claude Code and the agent-standard convention."
+  },
+  {
+    "tool": "Pi",
+    "source": "https://pi.dev/docs/latest/skills#locations",
+    "project_search_path": [
+      ".pi/skills/",
+      ".agents/skills/"
+    ],
+    "global_search_path": [
+      "~/.pi/agent/skills/",
+      "~/.agents/skills/"
+    ],
+    "notes": "Project skills are resolved from .pi/skills/ and .agents/skills/ in the cwd and ancestor directories, up to the git repository root (or filesystem root when not in a repo). ~/.agents/skills/ is shared with Claude Code / OpenAI Codex."
+  }
+]
