@@ -21,3 +21,14 @@ The tool described above is a subset of what vercel-labs/skills is trying to ach
 - For skill discovery during install, should respect `.claude-plugin/plugin.json` (see [this section](https://github.com/vercel-labs/skills#plugin-manifest-discovery) of vercel-labs/skills)
 - Should be able to discover skills that were installed in another way but not managed with gent
 - Should start as a CLI but doesn't necessarily have to stay that way (eventually could expand into a desktop app)
+
+## Eventual goal
+
+I'm wondering if this will eventually expand from just a skills manager into an agent configuration manager (plugins, skills, tools, etc.)
+
+## Inspiration
+
+- [vercel-labs/skills](https://github.com/vercel-labs/skills)
+- [dot-agents/dot-agents](https://github.com/dot-agents/dot-agents)
+- [getsentry/dotagents](https://github.com/getsentry/dotagents)
+- [tanstack/intent](https://github.com/tanstack/intent)
