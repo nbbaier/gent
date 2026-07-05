@@ -216,11 +216,16 @@
 		],
 		"global_search_path": [
 			"~/.config/opencode/skills/<name>/SKILL.md",
+			"~/.opencode/skills/<name>/SKILL.md",
 			"~/.claude/skills/<name>/SKILL.md",
 			"~/.agents/skills/<name>/SKILL.md"
 		],
 		"notes": ".claude/skills/ and .agents/skills/ directories are supported for compatibility with Claude Code and the agent-standard convention. Project-local paths are walked upward from the cwd to the git worktree root and global paths are additionally loaded, but which location wins on a name collision is not documented.",
-		"precedence_order": null,
+		"precedence_order": [
+			"nearest directory wins (project over global; deeper dir over shallower)",
+			"same level: .agents/skills > .opencode/skills > .claude/skills",
+			"observed 2026-07-05 via collision probes — dedup to one entry per name"
+		],
 		"plugin_skill_loading": "OpenCode plugins (local JS/TS in .opencode/plugins/ or npm packages) are for hooks, events, and custom tools ONLY — they do NOT contribute skills. Skills come solely from the six documented directories. (Third-party plugins exist that reimplement skill-loading as a tool, but that is the inverse — the native path does not ingest plugin skills.)",
 		"observed": {
 			"date": "2026-07-04",
@@ -229,7 +234,7 @@
 				"50 from ~/.agents/skills/",
 				"~/.claude/skills/ (compat, symlink farm into ~/.agents/skills/)"
 			],
-			"notes": "Reads ~/.agents/skills/ natively plus ~/.claude/skills/ for Claude compatibility."
+			"notes": "Reads ~/.agents/skills/ natively plus ~/.claude/skills/ for Claude compatibility. Update 2026-07-05 (v1.17.9, isolation probes): OpenCode HAS a query surface — undocumented `opencode debug skill` emits JSON [{name, description, location, content}] with absolute SKILL.md paths ('<built-in>' sentinel for bundled), no model call, context-sensitive to cwd (pipe was flaky; redirect to file then parse). Global roots probe-confirmed: ~/.config/opencode/skills, ~/.opencode/skills (undocumented), ~/.agents/skills, ~/.claude/skills, +1 built-in (customize-opencode). Project flavors read: .opencode/skills, .agents/skills, .claude/skills; NOT read: .github/skills, .agent/skills. Walk-up: git-root-bounded inclusive (above git root not loaded); opencode.json-only boundary untested. Precedence: dedup to one — nearest dir wins; same level .agents > .opencode > .claude; project overrides global. No config gating — skills load with no opencode.json."
 		}
 	},
 	{
