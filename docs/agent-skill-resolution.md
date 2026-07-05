@@ -2,7 +2,7 @@
 
 > Working doc. Captures what we've verified about how each agent resolves skills **in practice**, so `gent` can answer "which skills does agent X actually have access to?" — and flags what still needs drilling into. Companion to the reference data in [`skill-locations.md`](./skill-locations.md) and [`skill-data.json`](./skill-data.json).
 >
-> Last updated: 2026-07-04. All "observed" facts are from this machine (darwin 24.6.0) on that date and will drift as tools update.
+> Last updated: 2026-07-05. All "observed" facts are from this machine (darwin 24.6.0) on the date noted and will drift as tools update.
 
 ## The goal this serves
 
@@ -33,8 +33,8 @@ Open architectural decision (decide before building): does gent **call the query
 | Agent | Command | Names | Path | Source label | Machine-readable | Verdict |
 |---|---|:--:|:--:|:--:|:--:|---|
 | **GitHub Copilot (CLI)** | `copilot skill list --json` | ✅ | ✅ | ✅ | ✅ JSON | **Best** — `{name, description, source, path}` per skill |
-| **Amp** | `amp` resolved list (see `amp-skills.md`) | ✅ | ✅ (`file://`) | partial | ⚠️ text | Authoritative, needs parsing |
-| **Gemini CLI** | `gemini skills list --all` | ✅ | ✅ (`Location:`) | ✅ (`[Enabled]`) | ⚠️ text | Authoritative, needs parsing |
+| **Amp** | `amp skill list --json` | ✅ | ✅ (`file://` `baseDir`) | inferable from path | ✅ JSON | **Best-tier** — `{skills: [{name, description, baseDir}], errors}`; no explicit source label, but `baseDir` identifies the root |
+| **Gemini CLI** | `gemini skills list --all` | ✅ | ✅ (`Location:`) | ✅ (`[Enabled]`) | ⚠️ text | Authoritative **only in trusted folders** — silently omits workspace skills otherwise (see walk-up findings) |
 | **OpenAI Codex** | `codex plugin list` | plugins only | plugin paths | — | ⚠️ text | Partial — no skills-list command; dir scopes must be modeled |
 | **Pi** | `pi list` | packages only | package paths | — | ⚠️ text | Partial — packages only; dir scopes must be modeled |
 | **Factory (droid)** | — (TUI header `Skills (N)` count) | ❌ | ❌ | ❌ | ❌ | Must model + probe |
@@ -42,7 +42,9 @@ Open architectural decision (decide before building): does gent **call the query
 | **OpenCode** | — (no skills subcommand) | ❌ | ❌ | ❌ | ❌ | Must model + probe |
 | **GitHub Copilot (cloud agent)** | — (runs server-side) | ❌ | ❌ | ❌ | ❌ | Not locally introspectable; model repo + config inputs only |
 
-**Only 3 of 9 give a clean authoritative resolved list** (Copilot CLI, Amp, Gemini). The rest need a modeled resolver — which is exactly why the empirical work is worth doing.
+**Only 3 of 9 give a clean authoritative resolved list** (Copilot CLI, Amp, Gemini) — and two of them (Copilot CLI, Amp) emit JSON. The rest need a modeled resolver — which is exactly why the empirical work is worth doing.
+
+> Drift note (2026-07-05): Amp's JSON list returned 135 skills (53 `~/.agents/skills` + 79 Claude plugin-cache + 3 built-in) vs. 132 observed on 2026-07-04 — the `~/.agents/skills` count moved 50→53 in a day. Query-at-runtime absorbs this automatically; a modeled resolver would need the drift harness (open question 6).
 
 ### Note: Copilot CLI ≠ Copilot cloud agent
 
@@ -53,17 +55,17 @@ Open architectural decision (decide before building): does gent **call the query
 - **Plugin:** installed plugins that bundle skills
 - **Custom:** dirs added with `copilot skill add <directory>`
 
-Observed `--json` `source` values here: `personal-agents` (53, → `~/.agents/skills`) and `builtin` (1, → `~/Library/Caches/copilot/pkg/.../builtin`). The other source labels (`project-*`, `personal-copilot`, `plugin`, `custom`) are inferred from `--help` but **not yet observed** — worth confirming with test skills.
+Observed `--json` `source` values: `personal-agents` (53, → `~/.agents/skills`), `builtin` (1, → `~/Library/Caches/copilot/pkg/.../builtin`), and — from the 2026-07-05 walk-up probes — `project` (cwd skill dirs) and `inherited` (ancestor dirs up to the git root). The earlier `project-*` guess was wrong. Still unobserved: `personal-copilot` (`~/.copilot/skills/`), `plugin`, `custom` (`copilot skill add`).
 
 ## The 5 dimensions a resolver spec must capture
 
 For each agent, gent's model needs:
 
 1. **Global roots** — which `~/.X/skills` dirs (droid surprised us with 4).
-2. **Project roots + walk-up rule** — which in-repo dirs, and how far up the tree (cwd only? up to git root? filesystem root?). This is the "sensitive to project context" requirement. **Untested for every agent so far.**
+2. **Project roots + walk-up rule** — which in-repo dirs, and how far up the tree (cwd only? up to git root? filesystem root?). This is the "sensitive to project context" requirement. **Tested 2026-07-05 for Amp (filesystem root), Copilot CLI (git root), Gemini (cwd only)** — three agents, three different answers. Untested for the rest.
 3. **Symlink following** — yes/no (decides whether the `~/.agents → ~/.claude` symlink farm counts as a second source or the same one).
 4. **Plugin / extension sources** — cache locations + enable/disable state.
-5. **Precedence / dedup on name collision** — who wins, or do duplicates coexist (Codex docs say both remain). **Untested for every agent so far.**
+5. **Precedence / dedup on name collision** — who wins, or do duplicates coexist (Codex docs say both remain). **Tested 2026-07-05 for Amp + Copilot CLI (dedup, nearest dir wins) and Gemini (last-wins override).** Untested for the rest.
 
 The isolation probe covers 1–3; `plugin list`-style commands + cache enumeration cover 4; deliberately colliding names covers 5.
 
@@ -77,15 +79,40 @@ The isolation probe covers 1–3; `plugin list`-style commands + cache enumerati
 - **Codex** — 50 `~/.agents/skills` + 5 `~/.codex/skills/.system` + 8 enabled plugins (`codex plugin list`).
 - **Plugin-skill behavior** — bundle skills: Claude Code, Codex, Cursor, Factory, Gemini, Pi; do **not**: OpenCode (hooks/tools only), Copilot cloud agent.
 
+## Walk-up & precedence findings (observed 2026-07-05)
+
+Probe method: uniquely-named skills at five levels of a throwaway tree — below cwd, at cwd, at an intermediate dir, at the git root, and 1–3 levels above the git root — in each agent's project-dir flavors, then query from the deep cwd. Unique names keep attribution unambiguous (each name exists in exactly one place). Colliding-name probes added afterward for precedence.
+
+### Amp
+
+- **Walk-up: unbounded.** Scans `.agents/skills/` and `.claude/skills/` in **cwd and every ancestor directory** — probes 1, 2, and 3 levels *above the git root* all loaded. The git root is not a boundary; model it as "walk to filesystem root."
+- Does **not** scan subdirectories below cwd, and does **not** read `.github/skills/`.
+- **Precedence (name collision): nearest directory wins** (cwd beat git root); at the same level, `.agents/skills/` beats `.claude/skills/`. Dedup — one entry survives, matching the manual's "first wins."
+- Query: `amp skill list --json` → `{skills: [{name, description, baseDir}], errors}`.
+
+### GitHub Copilot CLI
+
+- **Walk-up: stops at the git root.** Scans `.github/skills/`, `.agents/skills/`, and `.claude/skills/` at cwd and each ancestor **up to and including the git root**; probes above the git root did not load.
+- **Source labels observed: `project`** (cwd) **and `inherited`** (any ancestor, including the git root). The `project-*` taxonomy previously inferred from `--help` is wrong — `--help`'s "Project" bullet maps to these two labels.
+- **Precedence: nearest directory wins** (`project` beat `inherited`); at the same level, `.github/skills/` > `.agents/skills/` > `.claude/skills/`. Dedup — one entry survives.
+
+### Gemini CLI
+
+- **Walk-up: none.** Project scope is exactly **cwd** — `cwd/.gemini/skills/` and `cwd/.agents/skills/`. Probes at the git root and parent dirs did not load even when trusted. (Confirmed both from the bundle source — `path.join(this.targetDir, ...)`, no ancestor loop — and empirically from a trusted dir.)
+- **Trust gate: workspace skills load only in trusted folders** (`~/.gemini/trustedFolders.json`; `discoverSkills` returns early with "Workspace skills disabled because folder is not trusted"). Untrusted → `gemini skills list --all` **silently omits all project skills**, so the query command is only authoritative in trusted folders. gent must check trust state before treating Gemini's output as complete.
+- **Precedence, from the bundle: last-wins with a warning.** Load order: built-in → extension → `~/.gemini/skills` → `~/.agents/skills` → `cwd/.gemini/skills` → `cwd/.agents/skills`; a later same-named skill *overrides* the earlier one (emits a "Skill conflict detected" warning), so **project `.agents/skills` is the highest-precedence source** — matching the documented tier order.
+
+Consequence for gent: the three query-capable agents have **three different walk-up rules** (unbounded / git-root-bounded / none). Project context sensitivity cannot be generic — it's per-agent, and for Gemini it's also per-trust-state.
+
 ## Open questions — next-session drill-down
 
 Ranked by leverage for the resolver:
 
-1. **Project walk-up behavior** (dimension 2) for every agent — create a probe skill at `<repo>/.../skills/`, at a parent dir, and above the git root; see where each stops. Nothing here is tested yet.
-2. **Precedence / dedup** (dimension 5) — same-named skill in two roots; does one win or do both show? Matters for what `gent list` reports as authoritative.
-3. **Isolation battery for the model-only agents:** Cursor, OpenCode, Pi (and re-confirm Codex dir scopes, since it has no skills-list command).
-4. **Copilot source taxonomy** — create test skills to observe the `project-*`, `personal-copilot`, `plugin`, `custom` source labels and their paths.
-5. **Runtime strategy decision** — query-vs-model (hybrid?), which determines whether the modeled specs are load-bearing at runtime or just documentation.
+1. **Project walk-up behavior** (dimension 2) — ✅ **done for Amp, Copilot CLI, Gemini** (2026-07-05, see findings section: unbounded / git-root-bounded / none). Still untested: droid, Cursor, OpenCode, Codex, Pi — needs the isolation battery since they have no query command.
+2. **Precedence / dedup** (dimension 5) — ✅ **done for Amp, Copilot CLI** (nearest-dir wins, flavor order at same level) **and Gemini** (last-wins override, from source + docs). Still untested: droid, Cursor, OpenCode, Codex, Pi.
+3. **Isolation battery for the model-only agents:** Cursor, OpenCode, Pi, droid walk-up (and re-confirm Codex dir scopes, since it has no skills-list command). Now also carries the walk-up + precedence questions for those agents.
+4. **Copilot source taxonomy** — partially done: `project` and `inherited` observed (2026-07-05). Remaining: `personal-copilot`, `plugin`, `custom`.
+5. **Runtime strategy decision** — query-vs-model (hybrid?), which determines whether the modeled specs are load-bearing at runtime or just documentation. New input: Gemini's trust gate means even query output needs a modeled correction (check trust, warn or supplement), and the Amp 132→135 day-over-day drift shows why query-at-runtime is attractive where it exists.
 6. **Drift harness** — automate the isolation probe + query-command checks so gent can detect when a tool changes its resolution across versions.
 
 ## Method appendix — the isolation probe

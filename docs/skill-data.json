@@ -2,7 +2,10 @@
 	{
 		"tool": "Amp",
 		"source": "https://ampcode.com/manual#agent-skills",
-		"project_search_path": [".agents/skills/", ".claude/skills/"],
+		"project_search_path": [
+			".agents/skills/",
+			".claude/skills/"
+		],
 		"global_search_path": [
 			"~/.config/agents/skills/",
 			"~/.agents/skills/",
@@ -22,21 +25,25 @@
 		"plugin_skill_loading": "Amp's own plugins are TypeScript modules (PluginAPI exposes registerTool/registerCommand/on/experimental.createAgent) with NO skill-registration method — they cannot ship skills. The 'Plugins' entry in the skill precedence list refers to Amp reading skills bundled inside Claude Code plugin caches (~/.claude/plugins/cache/<owner>/<plugin>/<version>/skills/). Codex-native plugin caches (~/.codex/plugins/) are NOT read.",
 		"observed": {
 			"date": "2026-07-04",
-			"method": "Full resolved skill list dumped by the `amp` CLI (captured in docs/amp-skills.md), traced by file:// URI.",
+			"method": "Full resolved skill list dumped by the `amp` CLI (captured in docs/amp-skills.md), traced by file:// URI. Update 2026-07-05: `amp skill list --json` emits {skills: [{name, description, baseDir}], errors} — machine-readable; baseDir is a file:// URI identifying the source root. Returned 135 (53 ~/.agents + 79 Claude plugin-cache + 3 builtin) vs 132 on 2026-07-04.",
 			"total_loaded": 132,
 			"sources_loaded": [
 				"50 from ~/.agents/skills/",
 				"79 from ~/.claude/plugins/cache/ (compound-engineering 39, claude-plugins-official/vercel 27, claude-plugins-official/valtown 9, openai-codex 3, impeccable 1)",
 				"3 Amp built-in (builtin:///skills — building-plugins, building-skills, setup-tmux)"
 			],
-			"notes": "Confirms plugins in path = Claude Code plugin caches only. No skills loaded from ~/.codex/plugins/. Loaded fewer vercel skills (27) than the cache holds (45), consistent with name-collision dedup against higher-precedence dirs."
+			"notes": "Confirms plugins in path = Claude Code plugin caches only. No skills loaded from ~/.codex/plugins/. Loaded fewer vercel skills (27) than the cache holds (45), consistent with name-collision dedup against higher-precedence dirs. Update 2026-07-05 (walk-up probes): scans .agents/skills + .claude/skills in cwd and EVERY ancestor dir — probes 1-3 levels above the git root all loaded (git root is not a boundary; model as walk-to-filesystem-root). Does not scan below cwd; does not read .github/skills. Collision: dedup, nearest dir wins; same level .agents beats .claude."
 		}
 	},
 	{
 		"tool": "Claude Code",
 		"source": "https://code.claude.com/docs/en/skills#where-skills-live",
-		"project_search_path": [".claude/skills/<skill-name>/SKILL.md"],
-		"global_search_path": ["~/.claude/skills/<skill-name>/SKILL.md"],
+		"project_search_path": [
+			".claude/skills/<skill-name>/SKILL.md"
+		],
+		"global_search_path": [
+			"~/.claude/skills/<skill-name>/SKILL.md"
+		],
 		"notes": "Also supports enterprise and plugin scopes. Same-name precedence is enterprise > personal > project. Plugin skills are namespaced (plugin-name:skill-name) so they cannot conflict. Project skills also load from .claude/skills/ in every parent directory up to the repository root.",
 		"precedence_order": [
 			"Enterprise (managed settings)",
@@ -93,8 +100,14 @@
 	{
 		"tool": "Cursor",
 		"source": "https://cursor.com/docs/skills#skill-directories",
-		"project_search_path": [".agents/skills/", ".cursor/skills/"],
-		"global_search_path": ["~/.agents/skills/", "~/.cursor/skills/"],
+		"project_search_path": [
+			".agents/skills/",
+			".cursor/skills/"
+		],
+		"global_search_path": [
+			"~/.agents/skills/",
+			"~/.cursor/skills/"
+		],
 		"notes": "Also reads legacy compatibility directories: .claude/skills/ and .codex/skills/ (project), and ~/.claude/skills/ and ~/.codex/skills/ (global). Skills are not currently discovered outside the root .cursor/skills directory in monorepos. Precedence when a skill name collides across locations is not documented.",
 		"precedence_order": null,
 		"plugin_skill_loading": "Cursor plugins (a directory with .cursor-plugin/plugin.json — distinct from VS Code editor extensions) bundle a skills/ directory whose skills appear in the 'Agent Decides' section and can be invoked with /skill-name. None installed on this machine.",
@@ -112,8 +125,16 @@
 	{
 		"tool": "Factory CLI",
 		"source": "https://docs.factory.ai/cli/configuration/skills#where-skills-live",
-		"project_search_path": ["<repo>/.factory/skills/", "<repo>/.agent/skills/"],
-		"global_search_path": ["~/.factory/skills/", "~/.agents/skills/", "~/.agent/skills/", "~/.claude/skills/"],
+		"project_search_path": [
+			"<repo>/.factory/skills/",
+			"<repo>/.agent/skills/"
+		],
+		"global_search_path": [
+			"~/.factory/skills/",
+			"~/.agents/skills/",
+			"~/.agent/skills/",
+			"~/.claude/skills/"
+		],
 		"notes": "<repo>/.agent/skills/ is a compatibility location discovered for the .agent folder convention. Each skill lives in its own directory containing a SKILL.md. Precedence when a skill name collides across workspace/personal/compatibility locations is not documented. Only ~/.factory/skills/ (personal) and .agent/skills (compat) are documented; the `droid` binary ALSO reads ~/.agents/skills/, ~/.agent/skills/, and ~/.claude/skills/ globally (see observed) — all undocumented.",
 		"precedence_order": null,
 		"plugin_skill_loading": "Factory plugins bundle a skills/ directory (skills are model-invoked automatically). None installed on this machine (0 Factory plugins).",
@@ -132,8 +153,14 @@
 	{
 		"tool": "Gemini CLI",
 		"source": "https://geminicli.com/docs/cli/using-agent-skills/#discovery-tiers",
-		"project_search_path": [".agents/skills/", ".gemini/skills/"],
-		"global_search_path": ["~/.agents/skills/", "~/.gemini/skills/"],
+		"project_search_path": [
+			".agents/skills/",
+			".gemini/skills/"
+		],
+		"global_search_path": [
+			"~/.agents/skills/",
+			"~/.gemini/skills/"
+		],
 		"notes": "Full precedence (lowest to highest): built-in skills, extension skills, user skills, workspace skills. Within the same tier (user or workspace), the .agents/skills/ alias takes precedence over the .gemini/skills/ directory.",
 		"precedence_order": [
 			".agents/skills/ (workspace)",
@@ -152,7 +179,7 @@
 				"50 from ~/.agents/skills/",
 				"2 built-in bundled in the @google/gemini-cli npm package (skill-creator, antigravity-support)"
 			],
-			"notes": "Does NOT read Claude/Codex plugin caches or ~/.claude/skills/ — only the .agents standard dir plus its own npm-bundled built-ins."
+			"notes": "Does NOT read Claude/Codex plugin caches or ~/.claude/skills/ — only the .agents standard dir plus its own npm-bundled built-ins. Update 2026-07-05 (walk-up probes): project scope is cwd ONLY — cwd/.gemini/skills + cwd/.agents/skills, no walk-up (probes at git root and parent dirs did not load; bundle source uses path.join(targetDir,...) with no ancestor loop). Workspace skills load ONLY in trusted folders (~/.gemini/trustedFolders.json) — untrusted cwd makes `gemini skills list --all` silently omit all project skills. Collision: last-wins override with warning; load order builtin -> extensions -> ~/.gemini -> ~/.agents -> cwd/.gemini -> cwd/.agents, so project .agents/skills is highest."
 		}
 	},
 	{
@@ -163,7 +190,10 @@
 			".claude/skills",
 			".agents/skills"
 		],
-		"global_search_path": ["~/.copilot/skills", "~/.agents/skills"],
+		"global_search_path": [
+			"~/.copilot/skills",
+			"~/.agents/skills"
+		],
 		"notes": "Project skills are stored in the repository; personal skills are stored in the home directory and shared across projects. Locations are presented as alternatives rather than a searched, prioritized list, and precedence on a name collision is not documented.",
 		"precedence_order": null,
 		"plugin_skill_loading": "The cloud agent surface has NO plugin/extension skill contribution. (VS Code's chatSkills contribution point and the Copilot CLI's plugins do bundle skills, but those are different surfaces than the cloud agent.)",
@@ -205,8 +235,14 @@
 	{
 		"tool": "Pi",
 		"source": "https://pi.dev/docs/latest/skills#locations",
-		"project_search_path": [".pi/skills/", ".agents/skills/"],
-		"global_search_path": ["~/.pi/agent/skills/", "~/.agents/skills/"],
+		"project_search_path": [
+			".pi/skills/",
+			".agents/skills/"
+		],
+		"global_search_path": [
+			"~/.pi/agent/skills/",
+			"~/.agents/skills/"
+		],
 		"notes": "Project skills are resolved from .pi/skills/ and .agents/skills/ in the cwd and ancestor directories, up to the git repository root (or filesystem root when not in a repo). ~/.agents/skills/ is shared with Claude Code / OpenAI Codex. On a name collision, Pi warns and keeps the first skill found, but the order in which locations are checked is not documented.",
 		"precedence_order": null,
 		"plugin_skill_loading": "Pi packages (npm/git, installed via `pi install`) are a first-class skill source — via skills/ directories or a pi.skills entry in package.json — alongside the project/global dirs. The one installed package here (pi-cursor-sdk) ships no skills.",
