@@ -18,7 +18,19 @@
 			".claude/skills/",
 			"~/.claude/skills/",
 			"plugins, legacy toolbox directories, built-in skills"
-		]
+		],
+		"plugin_skill_loading": "Amp's own plugins are TypeScript modules (PluginAPI exposes registerTool/registerCommand/on/experimental.createAgent) with NO skill-registration method — they cannot ship skills. The 'Plugins' entry in the skill precedence list refers to Amp reading skills bundled inside Claude Code plugin caches (~/.claude/plugins/cache/<owner>/<plugin>/<version>/skills/). Codex-native plugin caches (~/.codex/plugins/) are NOT read.",
+		"observed": {
+			"date": "2026-07-04",
+			"method": "Full resolved skill list dumped by the `amp` CLI (captured in docs/amp-skills.md), traced by file:// URI.",
+			"total_loaded": 132,
+			"sources_loaded": [
+				"50 from ~/.agents/skills/",
+				"79 from ~/.claude/plugins/cache/ (compound-engineering 39, claude-plugins-official/vercel 27, claude-plugins-official/valtown 9, openai-codex 3, impeccable 1)",
+				"3 Amp built-in (builtin:///skills — building-plugins, building-skills, setup-tmux)"
+			],
+			"notes": "Confirms plugins in path = Claude Code plugin caches only. No skills loaded from ~/.codex/plugins/. Loaded fewer vercel skills (27) than the cache holds (45), consistent with name-collision dedup against higher-precedence dirs."
+		}
 	},
 	{
 		"tool": "Claude Code",
@@ -31,7 +43,18 @@
 			"~/.claude/skills/ (Personal)",
 			".claude/skills/ (Project)",
 			"Bundled/built-in skills"
-		]
+		],
+		"plugin_skill_loading": "Plugins bundle a skills/ directory (each skill a <name>/SKILL.md); skills are auto-discovered when the plugin is installed and namespaced plugin-name:skill-name so they never collide with the enterprise/personal/project chain. Verified loaded on this machine.",
+		"observed": {
+			"date": "2026-07-04",
+			"method": "Directory + plugin-cache enumeration, cross-checked against this session's available-skills list.",
+			"total_loaded": 150,
+			"sources_loaded": [
+				"~53 personal from ~/.claude/skills/ (mostly symlinks into ~/.agents/skills/ plus real ui-* directories)",
+				"97 from ~/.claude/plugins/cache/ (claude-plugins-official/vercel 45, compound-engineering 39, claude-plugins-official/valtown 9, openai-codex 3, impeccable 1)"
+			],
+			"notes": "Does NOT read ~/.agents/skills/ directly — it only picks up that content because ~/.claude/skills/ is populated with symlinks pointing into ~/.agents/skills/, and Claude Code follows symlinks."
+		}
 	},
 	{
 		"tool": "OpenAI Codex",
@@ -54,7 +77,18 @@
 			"$HOME/.agents/skills",
 			"/etc/codex/skills",
 			"bundled system skills"
-		]
+		],
+		"plugin_skill_loading": "Codex plugins (managed via `codex plugin`, listed with `codex plugin list`) bundle a skills/ directory whose skills load when the plugin is enabled — a 5th skill source on top of the documented REPO/USER/ADMIN/SYSTEM scopes. There is NO `codex skills` list subcommand (`codex skills` just launches interactive mode with 'skills' as the prompt).",
+		"observed": {
+			"date": "2026-07-04",
+			"method": "`codex plugin list` (authoritative for enabled plugins) plus directory enumeration.",
+			"sources_loaded": [
+				"50 from ~/.agents/skills/ (USER)",
+				"5 SYSTEM from ~/.codex/skills/.system/ (skill-creator, plugin-creator, skill-installer, openai-docs, imagegen)",
+				"enabled plugins: documents, pdf, spreadsheets, presentations, template-creator (openai-primary-runtime), browser (openai-bundled), vals (valtown, ~10 skills), github (openai-curated) — skills resolve under ~/.cache/codex-runtimes/ and ~/.codex/.tmp/, NOT ~/.codex/plugins/cache/"
+			],
+			"notes": "Codex reads ~/.agents/skills/ natively. Documented scope list omits the plugin source entirely."
+		}
 	},
 	{
 		"tool": "Cursor",
@@ -62,15 +96,38 @@
 		"project_search_path": [".agents/skills/", ".cursor/skills/"],
 		"global_search_path": ["~/.agents/skills/", "~/.cursor/skills/"],
 		"notes": "Also reads legacy compatibility directories: .claude/skills/ and .codex/skills/ (project), and ~/.claude/skills/ and ~/.codex/skills/ (global). Skills are not currently discovered outside the root .cursor/skills directory in monorepos. Precedence when a skill name collides across locations is not documented.",
-		"precedence_order": null
+		"precedence_order": null,
+		"plugin_skill_loading": "Cursor plugins (a directory with .cursor-plugin/plugin.json — distinct from VS Code editor extensions) bundle a skills/ directory whose skills appear in the 'Agent Decides' section and can be invoked with /skill-name. None installed on this machine.",
+		"observed": {
+			"date": "2026-07-04",
+			"method": "Directory enumeration (no non-interactive resolved-list command; the TUI requires workspace trust).",
+			"sources_loaded": [
+				"50 from ~/.agents/skills/",
+				"~/.claude/skills/ (legacy compat, symlink farm into ~/.agents/skills/)",
+				"5 from ~/.codex/skills/ (legacy compat)"
+			],
+			"notes": "Reads ~/.agents/skills/ natively plus the legacy ~/.claude/skills/ and ~/.codex/skills/ globals."
+		}
 	},
 	{
 		"tool": "Factory CLI",
 		"source": "https://docs.factory.ai/cli/configuration/skills#where-skills-live",
 		"project_search_path": ["<repo>/.factory/skills/", "<repo>/.agent/skills/"],
-		"global_search_path": ["~/.factory/skills/"],
-		"notes": "<repo>/.agent/skills/ is a compatibility location discovered for the .agent folder convention. Each skill lives in its own directory containing a SKILL.md. Precedence when a skill name collides across workspace/personal/compatibility locations is not documented.",
-		"precedence_order": null
+		"global_search_path": ["~/.factory/skills/", "~/.agents/skills/", "~/.agent/skills/", "~/.claude/skills/"],
+		"notes": "<repo>/.agent/skills/ is a compatibility location discovered for the .agent folder convention. Each skill lives in its own directory containing a SKILL.md. Precedence when a skill name collides across workspace/personal/compatibility locations is not documented. Only ~/.factory/skills/ (personal) and .agent/skills (compat) are documented; the `droid` binary ALSO reads ~/.agents/skills/, ~/.agent/skills/, and ~/.claude/skills/ globally (see observed) — all undocumented.",
+		"precedence_order": null,
+		"plugin_skill_loading": "Factory plugins bundle a skills/ directory (skills are model-invoked automatically). None installed on this machine (0 Factory plugins).",
+		"observed": {
+			"date": "2026-07-04",
+			"method": "Three converging lines: (1) `droid` binary string analysis, (2) an isolation probe, and (3) droid's own self-investigation (docs/droid-skill-discovery-report.md).",
+			"total_loaded": 53,
+			"sources_loaded": [
+				"The droid binary constructs global skill roots via path.join(homedir(), X, 'skills') for X in {'.factory','.agents','.agent','.claude'} — verified in the decompiled fragment `join(H,\".agents\",\"skills\")`.",
+				"~/.agents/skills/ is read DIRECTLY: an isolation probe (a uniquely-named skill created only in ~/.agents/skills/, with no symlink in ~/.claude or ~/.factory) moved the TUI count from Skills (53) to Skills (54).",
+				"~/.factory/skills/ (personal) and project <repo>/.factory/skills/ + <repo>/.agent/skills/."
+			],
+			"notes": "CORRECTION of an earlier false negative: a prior pass grepped the binary for the slashed literal '.agents/skills' (0 hits) and wrongly concluded droid does not read ~/.agents/skills. The path is built by joining separate tokens ['.agents','skills'], so the slashed form never appears. droid DOES read ~/.agents/skills/ directly — confirmed behaviorally. All four global roots (.factory/.agents/.agent/.claude) are undocumented except ~/.factory/skills/."
+		}
 	},
 	{
 		"tool": "Gemini CLI",
@@ -85,7 +142,18 @@
 			"~/.gemini/skills/ (user)",
 			"Extension skills",
 			"Built-in skills"
-		]
+		],
+		"plugin_skill_loading": "Gemini extensions (installed via `gemini extensions install`) bundle a top-level skills/ directory = the documented 'Extension Skills' discovery tier (above built-in, below user/workspace). No extension shipping skills is installed on this machine.",
+		"observed": {
+			"date": "2026-07-04",
+			"method": "Full resolved skill list from `gemini skills list --all`, traced by the reported Location: path.",
+			"total_loaded": 52,
+			"sources_loaded": [
+				"50 from ~/.agents/skills/",
+				"2 built-in bundled in the @google/gemini-cli npm package (skill-creator, antigravity-support)"
+			],
+			"notes": "Does NOT read Claude/Codex plugin caches or ~/.claude/skills/ — only the .agents standard dir plus its own npm-bundled built-ins."
+		}
 	},
 	{
 		"tool": "GitHub Copilot (cloud agent)",
@@ -97,7 +165,16 @@
 		],
 		"global_search_path": ["~/.copilot/skills", "~/.agents/skills"],
 		"notes": "Project skills are stored in the repository; personal skills are stored in the home directory and shared across projects. Locations are presented as alternatives rather than a searched, prioritized list, and precedence on a name collision is not documented.",
-		"precedence_order": null
+		"precedence_order": null,
+		"plugin_skill_loading": "The cloud agent surface has NO plugin/extension skill contribution. (VS Code's chatSkills contribution point and the Copilot CLI's plugins do bundle skills, but those are different surfaces than the cloud agent.)",
+		"observed": {
+			"date": "2026-07-04",
+			"method": "Not locally introspectable — the cloud agent runs server-side against the repository plus its own cloud home, not this machine.",
+			"sources_loaded": [
+				"none observable on this machine (~/.copilot/skills absent; repo .github/skills, .claude/skills, .agents/skills all absent)"
+			],
+			"notes": "The local ~/.agents/skills/ store is irrelevant to the cloud agent; only ~/.copilot/skills and in-repo dirs would matter, and none are populated here."
+		}
 	},
 	{
 		"tool": "OpenCode",
@@ -113,7 +190,17 @@
 			"~/.agents/skills/<name>/SKILL.md"
 		],
 		"notes": ".claude/skills/ and .agents/skills/ directories are supported for compatibility with Claude Code and the agent-standard convention. Project-local paths are walked upward from the cwd to the git worktree root and global paths are additionally loaded, but which location wins on a name collision is not documented.",
-		"precedence_order": null
+		"precedence_order": null,
+		"plugin_skill_loading": "OpenCode plugins (local JS/TS in .opencode/plugins/ or npm packages) are for hooks, events, and custom tools ONLY — they do NOT contribute skills. Skills come solely from the six documented directories. (Third-party plugins exist that reimplement skill-loading as a tool, but that is the inverse — the native path does not ingest plugin skills.)",
+		"observed": {
+			"date": "2026-07-04",
+			"method": "Directory enumeration (no skills subcommand in the CLI).",
+			"sources_loaded": [
+				"50 from ~/.agents/skills/",
+				"~/.claude/skills/ (compat, symlink farm into ~/.agents/skills/)"
+			],
+			"notes": "Reads ~/.agents/skills/ natively plus ~/.claude/skills/ for Claude compatibility."
+		}
 	},
 	{
 		"tool": "Pi",
@@ -121,6 +208,17 @@
 		"project_search_path": [".pi/skills/", ".agents/skills/"],
 		"global_search_path": ["~/.pi/agent/skills/", "~/.agents/skills/"],
 		"notes": "Project skills are resolved from .pi/skills/ and .agents/skills/ in the cwd and ancestor directories, up to the git repository root (or filesystem root when not in a repo). ~/.agents/skills/ is shared with Claude Code / OpenAI Codex. On a name collision, Pi warns and keeps the first skill found, but the order in which locations are checked is not documented.",
-		"precedence_order": null
+		"precedence_order": null,
+		"plugin_skill_loading": "Pi packages (npm/git, installed via `pi install`) are a first-class skill source — via skills/ directories or a pi.skills entry in package.json — alongside the project/global dirs. The one installed package here (pi-cursor-sdk) ships no skills.",
+		"observed": {
+			"date": "2026-07-04",
+			"method": "`pi list` (installed packages) plus directory enumeration.",
+			"sources_loaded": [
+				"50 from ~/.agents/skills/",
+				"~/.pi/agent/skills/ present but empty",
+				"1 installed package (npm:pi-cursor-sdk) with no bundled skills"
+			],
+			"notes": "Reads ~/.agents/skills/ natively; no package- or ~/.pi-sourced skills currently loaded."
+		}
 	}
 ]
