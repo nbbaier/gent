@@ -249,7 +249,14 @@
 			"~/.agents/skills/"
 		],
 		"notes": "Project skills are resolved from .pi/skills/ and .agents/skills/ in the cwd and ancestor directories, up to the git repository root (or filesystem root when not in a repo). ~/.agents/skills/ is shared with Claude Code / OpenAI Codex. On a name collision, Pi warns and keeps the first skill found, but the order in which locations are checked is not documented.",
-		"precedence_order": null,
+		"precedence_order": [
+			"<cwd>/.pi/skills (project, cwd only)",
+			".agents/skills walk-up (project, nearest ancestor first, to git root)",
+			"~/.pi/agent/skills (user)",
+			"~/.agents/skills (user)",
+			"package-bundled skills",
+			"first-wins name dedup over this order (observed 2026-07-05)"
+		],
 		"plugin_skill_loading": "Pi packages (npm/git, installed via `pi install`) are a first-class skill source — via skills/ directories or a pi.skills entry in package.json — alongside the project/global dirs. The one installed package here (pi-cursor-sdk) ships no skills.",
 		"observed": {
 			"date": "2026-07-04",
@@ -259,7 +266,7 @@
 				"~/.pi/agent/skills/ present but empty",
 				"1 installed package (npm:pi-cursor-sdk) with no bundled skills"
 			],
-			"notes": "Reads ~/.agents/skills/ natively; no package- or ~/.pi-sourced skills currently loaded."
+			"notes": "Reads ~/.agents/skills/ natively; no package- or ~/.pi-sourced skills currently loaded. Update 2026-07-05 (v0.80.3, isolation probes + source at ~/.opensrc): Pi HAS a query surface — RPC mode: printf '{\"type\":\"get_commands\",\"id\":\"1\"}\\n' | pi --mode rpc --offline --no-session returns JSONL whose data.commands includes each resolved skill as {name: 'skill:<name>', description, sourceInfo:{path, baseDir, scope, origin}}. No model call/key/network; cwd- and trust-sensitive. Global roots (trust-independent): ~/.pi/agent/skills ($PI_CODING_AGENT_DIR overridable) + ~/.agents/skills. Project roots (TRUST-GATED via ~/.pi/agent/trust.json; --approve trusts for the run): <cwd>/.pi/skills (cwd only, NO walk-up) and .agents/skills (walk-up cwd->git root inclusive; filesystem root if no .git). Package skills: npm/git/local packages from settings.json, via pi.skills manifest or conventional skills/ dir. Precedence high->low: project .pi > project .agents (nearest first) > ~/.pi/agent > ~/.agents > package; first-wins name dedup + physical-path dedup. Gotcha: the trust-need check scans .agents/skills ancestors UNBOUNDED while the loader is git-root-bounded, so a repo can demand trust for dirs the loader never reads."
 		}
 	}
 ]
