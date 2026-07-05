@@ -109,7 +109,10 @@
 			"~/.cursor/skills/"
 		],
 		"notes": "Also reads legacy compatibility directories: .claude/skills/ and .codex/skills/ (project), and ~/.claude/skills/ and ~/.codex/skills/ (global). Skills are not currently discovered outside the root .cursor/skills directory in monorepos. Precedence when a skill name collides across locations is not documented.",
-		"precedence_order": null,
+		"precedence_order": [
+			"prompt sort tiers: builtin (~/.cursor/skills-cursor) -> user home -> workspace -> plugin",
+			"no name-keyed dedup found in source — colliding names likely coexist (unverified)"
+		],
 		"plugin_skill_loading": "Cursor plugins (a directory with .cursor-plugin/plugin.json — distinct from VS Code editor extensions) bundle a skills/ directory whose skills appear in the 'Agent Decides' section and can be invoked with /skill-name. None installed on this machine.",
 		"observed": {
 			"date": "2026-07-04",
@@ -119,7 +122,7 @@
 				"~/.claude/skills/ (legacy compat, symlink farm into ~/.agents/skills/)",
 				"5 from ~/.codex/skills/ (legacy compat)"
 			],
-			"notes": "Reads ~/.agents/skills/ natively plus the legacy ~/.claude/skills/ and ~/.codex/skills/ globals."
+			"notes": "Reads ~/.agents/skills/ natively plus the legacy ~/.claude/skills/ and ~/.codex/skills/ globals. Update 2026-07-05 (cursor-agent 2026.07.01-41b2de7, bundle source + one headless --print --trust --mode ask probe call): anchor is the WORKSPACE DIR (= cwd or --workspace) with no walk in either direction — intermediate dir, git root, above-root, and below-cwd probes all failed to load; all four flavors (.cursor/.agents/.claude/.codex skills) loaded at cwd. The .claude/.codex legacy pair is gated by allow_third_party_plugin_imports (server-delivered team-policy field; enabled here). User scope mirrors: ~/.cursor/skills, ~/.agents/skills (+ gated ~/.claude, ~/.codex); builtins at ~/.cursor/skills-cursor. Trust-gated; --trust needed headless. Bundle contains a nestedExtensibilityService (downward ripwalk, globs */**/.cursor/**, */**/.agents/**) but it was inactive in the headless CLI run. No local query surface: 'cursor-agent skills' feeds the word to a live agent (paid trap). Precedence: sort-only tiers Builtin->UserHome->Workspace->Plugin, no name dedup in source; collision probe inconclusive."
 		}
 	},
 	{
