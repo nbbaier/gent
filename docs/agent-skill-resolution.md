@@ -40,7 +40,7 @@ Open architectural decision (decide before building): does gent **call the query
 | **Factory (droid)** | — (TUI header `Skills (N)` count) | ❌ | ❌ | ❌ | ❌ | Must model + probe |
 | **Cursor** | — (TUI, needs workspace trust) | ❌ | ❌ | ❌ | ❌ | Must model + probe |
 | **OpenCode** | — (no skills subcommand) | ❌ | ❌ | ❌ | ❌ | Must model + probe |
-| **GitHub Copilot (cloud agent)** | — (runs server-side) | ❌ | ❌ | ❌ | ❌ | Not locally introspectable; model repo + config inputs only |
+| **Claude Code** | — (no skills subcommand) | ❌ | ❌ | ❌ | ❌ | Must model + probe — best-documented of this group (scope precedence + plugin namespacing documented; docs claim parent-dir `.claude/skills` walk-up to repo root, untested) |
 
 **Only 3 of 9 give a clean authoritative resolved list** (Copilot CLI, Amp, Gemini) — and two of them (Copilot CLI, Amp) emit JSON. The rest need a modeled resolver — which is exactly why the empirical work is worth doing.
 
@@ -48,7 +48,7 @@ Open architectural decision (decide before building): does gent **call the query
 
 ### Note: Copilot CLI ≠ Copilot cloud agent
 
-`skill-data.json`'s "GitHub Copilot (cloud agent)" entry targets the **cloud** surface (server-side, not introspectable here, no plugin skills). The **CLI** (`copilot`) is a separate surface that *does* support plugin-bundled skills and exposes the best query interface we found. Its `copilot skill --help` documents its own sources:
+`skill-data.json`'s "GitHub Copilot (cloud agent)" entry targets the **cloud** surface (server-side, not introspectable here, no plugin skills) — it's out of scope for the table above, since `gent list --agent` resolves against local machine + project context; only the CLI surface is modeled. The **CLI** (`copilot`) is a separate surface that *does* support plugin-bundled skills and exposes the best query interface we found. Its `copilot skill --help` documents its own sources:
 
 - **Project:** `.github/skills/`, `.agents/skills/`, or `.claude/skills/`
 - **Personal:** `~/.copilot/skills/` or `~/.agents/skills/`
@@ -110,7 +110,7 @@ Ranked by leverage for the resolver:
 
 1. **Project walk-up behavior** (dimension 2) — ✅ **done for Amp, Copilot CLI, Gemini** (2026-07-05, see findings section: unbounded / git-root-bounded / none). Still untested: droid, Cursor, OpenCode, Codex, Pi — needs the isolation battery since they have no query command.
 2. **Precedence / dedup** (dimension 5) — ✅ **done for Amp, Copilot CLI** (nearest-dir wins, flavor order at same level) **and Gemini** (last-wins override, from source + docs). Still untested: droid, Cursor, OpenCode, Codex, Pi.
-3. **Isolation battery for the model-only agents:** Cursor, OpenCode, Pi, droid walk-up (and re-confirm Codex dir scopes, since it has no skills-list command). Now also carries the walk-up + precedence questions for those agents.
+3. **Isolation battery for the model-only agents:** Cursor, OpenCode, Pi, droid walk-up (and re-confirm Codex dir scopes, since it has no skills-list command). Now also carries the walk-up + precedence questions for those agents. Claude Code belongs in this group too — no skills-list subcommand, and its documented parent-dir walk-up (to repo root) is untested.
 4. **Copilot source taxonomy** — partially done: `project` and `inherited` observed (2026-07-05). Remaining: `personal-copilot`, `plugin`, `custom`.
 5. **Runtime strategy decision** — query-vs-model (hybrid?), which determines whether the modeled specs are load-bearing at runtime or just documentation. New input: Gemini's trust gate means even query output needs a modeled correction (check trust, warn or supplement), and the Amp 132→135 day-over-day drift shows why query-at-runtime is attractive where it exists.
 6. **Drift harness** — automate the isolation probe + query-command checks so gent can detect when a tool changes its resolution across versions.
