@@ -35,14 +35,14 @@ Open architectural decision (decide before building): does gent **call the query
 | **GitHub Copilot (CLI)** | `copilot skill list --json` | ✅ | ✅ | ✅ | ✅ JSON | **Best** — `{name, description, source, path}` per skill |
 | **Amp** | `amp skill list --json` | ✅ | ✅ (`file://` `baseDir`) | inferable from path | ✅ JSON | **Best-tier** — `{skills: [{name, description, baseDir}], errors}`; no explicit source label, but `baseDir` identifies the root |
 | **Gemini CLI** | `gemini skills list --all` | ✅ | ✅ (`Location:`) | ✅ (`[Enabled]`) | ⚠️ text | Authoritative **only in trusted folders** — silently omits workspace skills otherwise (see walk-up findings) |
-| **OpenAI Codex** | `codex plugin list` | plugins only | plugin paths | — | ⚠️ text | Partial — no skills-list command; dir scopes must be modeled |
+| **OpenAI Codex** | `codex debug prompt-input` | ✅ | ✅ (root alias + short path) | ✅ (root ↔ scope) | ⚠️ JSON prompt render, skills list is text inside | **Authoritative** — renders the model-visible prompt locally (no model call, <1s): `### Skill roots` table + `### Available skills`. Undocumented debug surface, so higher drift risk. `codex plugin list` still useful for enable state |
 | **Pi** | `pi list` | packages only | package paths | — | ⚠️ text | Partial — packages only; dir scopes must be modeled |
 | **Factory (droid)** | — (TUI header `Skills (N)` count) | ❌ | ❌ | ❌ | ❌ | Must model + probe |
 | **Cursor** | — (TUI, needs workspace trust) | ❌ | ❌ | ❌ | ❌ | Must model + probe |
 | **OpenCode** | — (no skills subcommand) | ❌ | ❌ | ❌ | ❌ | Must model + probe |
 | **Claude Code** | — (no skills subcommand) | ❌ | ❌ | ❌ | ❌ | Must model + probe — best-documented of this group (scope precedence + plugin namespacing documented; docs claim parent-dir `.claude/skills` walk-up to repo root, untested) |
 
-**Only 3 of 9 give a clean authoritative resolved list** (Copilot CLI, Amp, Gemini) — and two of them (Copilot CLI, Amp) emit JSON. The rest need a modeled resolver — which is exactly why the empirical work is worth doing.
+**4 of 9 give an authoritative resolved list** (Copilot CLI, Amp, Gemini, Codex) — two emit clean JSON (Copilot CLI, Amp), and Codex's was found only on 2026-07-05, hiding in the undocumented `codex debug prompt-input` (docs imply no such command exists). The rest need a modeled resolver — which is exactly why the empirical work is worth doing.
 
 > Drift note (2026-07-05): Amp's JSON list returned 135 skills (53 `~/.agents/skills` + 79 Claude plugin-cache + 3 built-in) vs. 132 observed on 2026-07-04 — the `~/.agents/skills` count moved 50→53 in a day. Query-at-runtime absorbs this automatically; a modeled resolver would need the drift harness (open question 6).
 
@@ -76,7 +76,7 @@ The isolation probe covers 1–3; `plugin list`-style commands + cache enumerati
 - **Amp** — resolved list = 50 `~/.agents/skills` + 79 Claude plugin-cache + 3 built-in (132). Reads Claude Code plugin caches, **not** Codex's. Amp's own plugins are TS-only (no skill API).
 - **Gemini** — 52 = 50 `~/.agents/skills` + 2 npm-bundled built-ins. Reads neither Claude nor Codex plugin caches.
 - **Copilot CLI** — 54 = 53 `~/.agents/skills` + 1 builtin, via `--json` (`name/description/source/path`).
-- **Codex** — 50 `~/.agents/skills` + 5 `~/.codex/skills/.system` + 8 enabled plugins (`codex plugin list`).
+- **Codex** — 50 `~/.agents/skills` + 5 `~/.codex/skills/.system` + 8 enabled plugins (`codex plugin list`). As of 2026-07-05: full resolution probed + source-verified — see the Codex subsection under walk-up findings, incl. the `codex debug prompt-input` query surface.
 - **Plugin-skill behavior** — bundle skills: Claude Code, Codex, Cursor, Factory, Gemini, Pi; do **not**: OpenCode (hooks/tools only), Copilot cloud agent.
 
 ## Walk-up & precedence findings (observed 2026-07-05)
@@ -102,15 +102,23 @@ Probe method: uniquely-named skills at five levels of a throwaway tree — below
 - **Trust gate: workspace skills load only in trusted folders** (`~/.gemini/trustedFolders.json`; `discoverSkills` returns early with "Workspace skills disabled because folder is not trusted"). Untrusted → `gemini skills list --all` **silently omits all project skills**, so the query command is only authoritative in trusted folders. gent must check trust state before treating Gemini's output as complete.
 - **Precedence, from the bundle: last-wins with a warning.** Load order: built-in → extension → `~/.gemini/skills` → `~/.agents/skills` → `cwd/.gemini/skills` → `cwd/.agents/skills`; a later same-named skill *overrides* the earlier one (emits a "Skill conflict detected" warning), so **project `.agents/skills` is the highest-precedence source** — matching the documented tier order.
 
-Consequence for gent: the three query-capable agents have **three different walk-up rules** (unbounded / git-root-bounded / none). Project context sensitivity cannot be generic — it's per-agent, and for Gemini it's also per-trust-state.
+### OpenAI Codex (probed 2026-07-05, v0.140.0; source corroboration from openai/codex 0.142.5)
+
+- **Query surface discovered: `codex debug prompt-input`** — renders the exact model-visible prompt as JSON locally (no model call, works offline, <1s), including a `### Skill roots` alias table (`r0 = /abs/path`, …) and `### Available skills` (`- name: desc (file: rN/<name>/SKILL.md)`). Context-sensitive (run it from the target cwd). Verified independently on this machine. Undocumented, so treat as higher-drift than the documented commands.
+- **Walk-up: stops at the project root, inclusive** — probes at cwd, intermediate dir, and git root loaded; 1–2 levels above did not. The boundary is the nearest **project-root marker**, default `.git`, configurable via `project_root_markers` in config.toml (empty array → cwd only). Source: `find_project_root` walks `cwd.ancestors()`; `dirs_between_project_root_and_cwd` yields the scan set.
+- **Project flavors: `.agents/skills` AND `.codex/skills`** (the latter under-documented), both git-root-bounded. **`.claude/skills` is NOT read in-repo** (probes at cwd and git root both absent) — unlike Amp and Copilot CLI.
+- **Precedence: NO dedup — colliding names coexist** (confirmed: same name at two levels appears 2×; same name cross-flavor in one dir appears 2×). Dedup is by physical path only; entries are sorted by scope rank (Repo > User > System > Admin) then name, so the higher-scope copy lists first but the other survives. Matches the docs' claim, now probe-confirmed.
+- Global roots: `~/.agents/skills` (User), deprecated-but-still-scanned `~/.codex/skills` (User), bundled `~/.codex/skills/.system` (System), `/etc/codex/skills` (Admin, absent here), plugin caches under `~/.codex/plugins/cache/*` (the real 5th source), plus an `extra_skill_roots` config hook. Roots scanned recursively to depth 6; directory symlinks followed.
+
+Consequence for gent: the four query-capable agents have **four different walk-up rules** (Amp unbounded / Copilot git-root / Gemini none / Codex project-root-marker, default `.git`, configurable). Project context sensitivity cannot be generic — it's per-agent, per-trust-state (Gemini), and per-config (Codex's `project_root_markers`).
 
 ## Open questions — next-session drill-down
 
 Ranked by leverage for the resolver:
 
-1. **Project walk-up behavior** (dimension 2) — ✅ **done for Amp, Copilot CLI, Gemini** (2026-07-05, see findings section: unbounded / git-root-bounded / none). Still untested: droid, Cursor, OpenCode, Codex, Pi — needs the isolation battery since they have no query command.
-2. **Precedence / dedup** (dimension 5) — ✅ **done for Amp, Copilot CLI** (nearest-dir wins, flavor order at same level) **and Gemini** (last-wins override, from source + docs). Still untested: droid, Cursor, OpenCode, Codex, Pi.
-3. **Isolation battery for the model-only agents:** Cursor, OpenCode, Pi, droid walk-up (and re-confirm Codex dir scopes, since it has no skills-list command). Now also carries the walk-up + precedence questions for those agents. Claude Code belongs in this group too — no skills-list subcommand, and its documented parent-dir walk-up (to repo root) is untested.
+1. **Project walk-up behavior** (dimension 2) — ✅ **done for Amp, Copilot CLI, Gemini, Codex** (2026-07-05, see findings section: unbounded / git-root-bounded / none / project-root-marker). Still untested: droid, Cursor, OpenCode, Pi, Claude Code — needs the isolation battery since they have no query command.
+2. **Precedence / dedup** (dimension 5) — ✅ **done for Amp, Copilot CLI** (dedup, nearest-dir wins, flavor order at same level), **Gemini** (last-wins override, from source + docs), **and Codex** (no dedup — colliding names coexist, sorted by scope rank). Still untested: droid, Cursor, OpenCode, Pi, Claude Code.
+3. **Isolation battery for the model-only agents:** Cursor, OpenCode, Pi, droid walk-up. Claude Code belongs in this group too — no skills-list subcommand, and its documented parent-dir walk-up (to repo root) is untested. (Codex resolved 2026-07-05 — turned out to have a query surface after all.)
 4. **Copilot source taxonomy** — partially done: `project` and `inherited` observed (2026-07-05). Remaining: `personal-copilot`, `plugin`, `custom`.
 5. **Runtime strategy decision** — query-vs-model (hybrid?), which determines whether the modeled specs are load-bearing at runtime or just documentation. New input: Gemini's trust gate means even query output needs a modeled correction (check trust, warn or supplement), and the Amp 132→135 day-over-day drift shows why query-at-runtime is attractive where it exists.
 6. **Drift harness** — automate the isolation probe + query-command checks so gent can detect when a tool changes its resolution across versions.

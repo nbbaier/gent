@@ -85,7 +85,7 @@
 			"/etc/codex/skills",
 			"bundled system skills"
 		],
-		"plugin_skill_loading": "Codex plugins (managed via `codex plugin`, listed with `codex plugin list`) bundle a skills/ directory whose skills load when the plugin is enabled — a 5th skill source on top of the documented REPO/USER/ADMIN/SYSTEM scopes. There is NO `codex skills` list subcommand (`codex skills` just launches interactive mode with 'skills' as the prompt).",
+		"plugin_skill_loading": "Codex plugins (managed via `codex plugin`, listed with `codex plugin list`) bundle a skills/ directory whose skills load when the plugin is enabled — a 5th skill source on top of the documented REPO/USER/ADMIN/SYSTEM scopes. There is NO `codex skills` list subcommand, BUT `codex debug prompt-input` (undocumented, found 2026-07-05) renders the model-visible prompt locally with the fully-resolved skills catalog — a '### Skill roots' alias table plus '### Available skills' with rN/<name>/SKILL.md paths. No model call, context-sensitive to cwd.",
 		"observed": {
 			"date": "2026-07-04",
 			"method": "`codex plugin list` (authoritative for enabled plugins) plus directory enumeration.",
@@ -94,7 +94,7 @@
 				"5 SYSTEM from ~/.codex/skills/.system/ (skill-creator, plugin-creator, skill-installer, openai-docs, imagegen)",
 				"enabled plugins: documents, pdf, spreadsheets, presentations, template-creator (openai-primary-runtime), browser (openai-bundled), vals (valtown, ~10 skills), github (openai-curated) — skills resolve under ~/.cache/codex-runtimes/ and ~/.codex/.tmp/, NOT ~/.codex/plugins/cache/"
 			],
-			"notes": "Codex reads ~/.agents/skills/ natively. Documented scope list omits the plugin source entirely."
+			"notes": "Codex reads ~/.agents/skills/ natively. Documented scope list omits the plugin source entirely. Update 2026-07-05 (isolation probes on v0.140.0 + openai/codex 0.142.5 source): walk-up scans cwd and every ancestor up to and INCLUDING the project root (nearest project_root_markers match, default .git; configurable; empty array = cwd only) — probes above the git root did not load. Reads BOTH .agents/skills and .codex/skills in-repo (latter under-documented); does NOT read in-repo .claude/skills. NO name-collision dedup: same-named skills at two levels or across flavors both appear (dedup is by physical path only; sorted by scope rank Repo > User > System > Admin). Deprecated ~/.codex/skills (user) still scanned. Roots scanned recursively to depth 6; directory symlinks followed."
 		}
 	},
 	{
