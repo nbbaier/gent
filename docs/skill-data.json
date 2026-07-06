@@ -53,14 +53,15 @@
 		],
 		"plugin_skill_loading": "Plugins bundle a skills/ directory (each skill a <name>/SKILL.md); skills are auto-discovered when the plugin is installed and namespaced plugin-name:skill-name so they never collide with the enterprise/personal/project chain. Verified loaded on this machine.",
 		"observed": {
-			"date": "2026-07-04",
-			"method": "Directory + plugin-cache enumeration, cross-checked against this session's available-skills list.",
-			"total_loaded": 150,
+			"date": "2026-07-06",
+			"method": "Bogus-key debug harness: ANTHROPIC_API_KEY=bogus claude -p hi --debug --debug-file <f> — auth fails after skill discovery (exit 1, no model call); debug log prints the scan set (Loading skills from: managed/user/project=[...]) + per-scope counts, and the failed run's transcript (~/.claude/projects/<munged-cwd>/*.jsonl) contains the full skills attachment as name: description lines. Isolation probes at 7 tree levels x 5 flavors + global roots + collisions (v2.1.201).",
+			"total_loaded": 144,
 			"sources_loaded": [
-				"~53 personal from ~/.claude/skills/ (mostly symlinks into ~/.agents/skills/ plus real ui-* directories)",
-				"97 from ~/.claude/plugins/cache/ (claude-plugins-official/vercel 45, compound-engineering 39, claude-plugins-official/valtown 9, openai-codex 3, impeccable 1)"
+				"53 user from ~/.claude/skills/ (mostly symlinks into ~/.agents/skills/ plus real ui-* directories) + 10 legacy ~/.claude/commands = 63 skill-dir commands",
+				"80 plugin skills from ~/.claude/plugins/cache/ (compound-engineering 39, claude-plugins-official/vercel 28, claude-plugins-official/valtown 9, openai-codex 3, impeccable 1)",
+				"26 bundled skills in the binary ('Sending 144 skills via attachment' from a clean non-repo dir)"
 			],
-			"notes": "Does NOT read ~/.agents/skills/ directly — it only picks up that content because ~/.claude/skills/ is populated with symlinks pointing into ~/.agents/skills/, and Claude Code follows symlinks."
+			"notes": "Isolation-probe confirmed (2026-07-06): does NOT read ~/.agents/skills/ or ~/.config/claude/skills/ — shared content arrives only via the ~/.claude/skills symlink farm (symlinks followed, project scope too). Project flavor is .claude/skills ONLY (no .agents/.agent/.github/.codex). Walk-up: cwd to git root inclusive; with no .git anywhere the walk continues to the filesystem root (undocumented). --add-dir <dir> loads <dir>/.claude/skills (exact dir, no walk) as a separate 'additional' scope. Collisions: no name dedup in the prompt (both copies listed, most-specific first); invocation winner is nearest project dir within scope, and USER beats PROJECT across scopes (matches documented personal > project). Directory name beats frontmatter name:. No trust gate. --bare skips skill-dir discovery; managed root /Library/Application Support/ClaudeCode/.claude/skills scanned but absent here (untested)."
 		}
 	},
 	{

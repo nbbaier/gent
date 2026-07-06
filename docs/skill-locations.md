@@ -54,6 +54,8 @@ Each section records both the tool's **documented** behavior (from its source do
 
 **Notes:** Also supports enterprise and plugin scopes. Same-name precedence is enterprise > personal > project. Plugin skills are namespaced (`plugin-name:skill-name`) so they cannot conflict. Project skills also load from `.claude/skills/` in every parent directory up to the repository root.
 
+**Observed (2026-07-06, v2.1.201, isolation probes via the bogus-key debug harness):** walk-up confirmed cwd→git-root inclusive; **no `.git` → walks to the filesystem root** (undocumented). `.claude/skills` is the *only* project flavor (no `.agents`/`.agent`/`.github`/`.codex`). Global root is `~/.claude/skills` only (probes in `~/.agents/skills` and `~/.config/claude/skills` did not load). Symlinks followed at both scopes. `--add-dir <dir>` loads `<dir>/.claude/skills` (exact dir, no walk) as a separate `additional` scope. Colliding names coexist in the prompt (no dedup); on invocation the nearest project dir wins, and user beats project — the documented personal > project order, probe-confirmed. Directory name beats frontmatter `name:`. No trust gate.
+
 **Precedence order (highest to lowest):**
 
 1. Enterprise (managed settings)
@@ -270,7 +272,7 @@ These seven are mutually interoperable through the standard directory at both sc
 
 ### No support
 
-- **Claude Code** — only `.claude/skills/` (project) and `~/.claude/skills/` (global). It genuinely does not read any `.agents/` directory. _Observed:_ it still loads the shared skills here because `~/.claude/skills/` is populated with symlinks into `~/.agents/skills/` — i.e. transitively, unlike droid which reads `~/.agents/skills/` directly.
+- **Claude Code** — only `.claude/skills/` (project) and `~/.claude/skills/` (global). It genuinely does not read any `.agents/` directory — isolation-probe confirmed 2026-07-06 (a skill in `~/.agents/skills/` only, no symlink, did not load). _Observed:_ it still loads the shared skills here because `~/.claude/skills/` is populated with symlinks into `~/.agents/skills/` — i.e. transitively, unlike droid which reads `~/.agents/skills/` directly.
 
 > **Observed nuance:** "support" above describes what each tool reads *by directory name*. Two different mechanisms produce the same apparent result on this machine: (a) reading `~/.agents/skills/` **directly** (droid — confirmed; and the natively-`.agents` tools), vs. (b) reading `~/.claude/skills/`, a symlink farm pointing into `~/.agents/skills/`, and following the links (**Claude Code**, Amp). Only an isolation test (skill in one dir, no symlink) distinguishes the two. See [Observed on this machine](#observed-on-this-machine-2026-07-04).
 
