@@ -26,7 +26,7 @@ For each agent, prefer the cheapest **authoritative** method:
 1. **If the agent exposes a "list resolved skills" command → shell out to it.** This is best: it returns everything the agent sees (managed or not), and it can't drift when the tool changes its paths. Ideal if it emits machine-readable output with a source path.
 2. **If not → encode a discovery model**, verified by isolation probe, and re-verify on a schedule (tools drift; droid was v0.164 mid-session).
 
-Open architectural decision (decide before building): does gent **call the query command at runtime** where one exists, and fall back to a modeled resolver otherwise (hybrid), or **always model** for a uniform code path? Hybrid is the current lean.
+**Decided (2026-07-06): hybrid** — query at runtime where an authoritative, free, side-effect-free surface exists; modeled resolver otherwise, and as the fallback and trust-gate corrector everywhere. Claude Code is model-only at runtime despite its query surface (side effects + undocumented format). See [ADR-0004](./adr/0004-hybrid-runtime-strategy.md).
 
 ## Per-agent query interface (observed 2026-07-04)
 
@@ -174,7 +174,7 @@ Ranked by leverage for the resolver:
 3b. **droid follow-ups** — ✅ **all three resolved 2026-07-06** (see the droid subsection): `.claude` is only an interactive import flow, not a root; invocation winner recovered from bundle source; symlinked skill dirs are loaded but uncounted by the header.
 3c. **Cursor precedence confirmation** — ✅ **done 2026-07-06**: dedup confirmed with distinct-named controls ruling out list truncation.
 4. **Copilot source taxonomy** — ✅ **complete 2026-07-06**: all seven labels observed (`builtin`, `personal-agents`, `personal-copilot`, `project`, `inherited`, `plugin`, `custom`). Plugin skills install from Claude Code-format marketplaces (local paths accepted) into `~/.copilot/installed-plugins/`.
-5. **Runtime strategy decision** — query-vs-model (hybrid?), which determines whether the modeled specs are load-bearing at runtime or just documentation. New inputs: Gemini's trust gate means even query output needs a modeled correction (check trust, warn or supplement); the Amp 132→135 day-over-day drift shows why query-at-runtime is attractive where it exists; and Claude Code's harness is authoritative but has side effects (junk transcripts) and an undocumented log format — a case where gent might prefer the modeled resolver at runtime and use the harness only for verification.
+5. **Runtime strategy decision** — ✅ **decided 2026-07-06: hybrid** ([ADR-0004](./adr/0004-hybrid-runtime-strategy.md)). Query at runtime for the six agents with a free, side-effect-free surface (Gemini/Pi output trust-corrected by the model); modeled resolver for droid, Cursor, and — despite its query surface — Claude Code (junk-transcript side effect + undocumented log format; the harness is verification-only). The modeled specs are therefore load-bearing at runtime, not just documentation.
 6. **Drift harness** — automate the isolation probe + query-command checks so gent can detect when a tool changes its resolution across versions. Claude Code's fs-root fallback and `additional` scope are exactly the kind of undocumented behavior it should watch. Seed scripts live in [`probes/`](../probes/README.md) (droid pty header harness committed 2026-07-06).
 7. **Claude Code managed scope** — `/Library/Application Support/ClaudeCode/.claude/skills` is scanned but absent on this machine; creating it needs admin. Low value unless gent targets managed installs.
 

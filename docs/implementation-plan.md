@@ -22,6 +22,7 @@ See [`CONTEXT.md`](../CONTEXT.md) for vocabulary and `docs/adr/` for the decisio
 | Runtime          | TypeScript on **Bun**, shipped as a single compiled binary; `bunx`/`npx` fallback                                                  |
 | Git access       | Shell out to system `git` (sparse partial checkout + `rev-parse`)                                                                  |
 | Commands (v1)    | `add` (`a`/`i`/`install`), `remove` (`rm`/`r`), `sync`, `update`, `list` (`ls`), `adopt`                                           |
+| Runtime strategy | **Hybrid** — query agents with a free, side-effect-free surface at runtime; modeled resolver for droid, Cursor, Claude Code, and as universal fallback + trust-gate corrector (ADR-0004) |
 
 ## v1 command surface
 
