@@ -1,0 +1,24 @@
+{
+	"name": "gent",
+	"version": "0.1.0",
+	"description": "Installs agent skills from common sources, keeps them synchronized, and places them where each agent tool looks.",
+	"license": "MIT",
+	"repository": "github:nbbaier/gent",
+	"type": "module",
+	"bin": {
+		"gent": "./src/cli.ts"
+	},
+	"files": [
+		"src"
+	],
+	"scripts": {
+		"dev": "bun run src/cli.ts",
+		"test": "bun test",
+		"typecheck": "tsc --noEmit",
+		"build": "bun build --compile src/cli.ts --outfile dist/gent"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.6",
+		"typescript": "^5.9.3"
+	}
+}
