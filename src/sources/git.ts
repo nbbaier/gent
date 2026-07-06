@@ -1,4 +1,4 @@
-import { mkdtemp, stat } from "node:fs/promises";
+import { lstat, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { walkFiles } from "../fs-util.ts";
@@ -87,7 +87,12 @@ export async function resolveGit(
 
 	const resolvedRef = await git(["rev-parse", "HEAD"], checkout);
 	const root = ref.subpath ? join(checkout, ref.subpath) : checkout;
-	const rootStat = await stat(root).catch(() => null);
+	const rootStat = await lstat(root).catch(() => null);
+	if (rootStat?.isSymbolicLink()) {
+		throw new Error(
+			`subpath '${ref.subpath}' is a symlink in ${ref.url} at ${resolvedRef}`,
+		);
+	}
 	if (!rootStat?.isDirectory()) {
 		throw new Error(
 			`subpath '${ref.subpath}' not found in ${ref.url} at ${resolvedRef}`,

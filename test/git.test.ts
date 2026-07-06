@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { mkdir, mkdtemp } from "node:fs/promises";
+import { mkdir, mkdtemp, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveSource } from "../src/sources/index.ts";
@@ -102,6 +102,23 @@ describe("git resolver", () => {
 		expect(resolveSource(gitRef({ subpath: "skills/nope" }))).rejects.toThrow(
 			"subpath 'skills/nope' not found",
 		);
+	});
+
+	test("rejects a subpath that is a symlink", async () => {
+		const linkRepo = await mkdtemp(join(tmpdir(), "gent-symlink-repo-"));
+		const outside = await mkdtemp(join(tmpdir(), "gent-outside-"));
+		await git(["init", "-q", "-b", "main", "."], linkRepo);
+		await git(["config", "user.email", "t@example.com"], linkRepo);
+		await git(["config", "user.name", "t"], linkRepo);
+		await git(["config", "uploadpack.allowFilter", "true"], linkRepo);
+		await mkdir(join(linkRepo, "skills"), { recursive: true });
+		await symlink(outside, join(linkRepo, "skills", "leak"));
+		await git(["add", "."], linkRepo);
+		await git(["commit", "-q", "-m", "symlink"], linkRepo);
+
+		await expect(
+			resolveSource({ kind: "git", url: linkRepo, ref: null, subpath: "skills/leak" }),
+		).rejects.toThrow("is a symlink");
 	});
 
 	test("unknown ref errors", async () => {

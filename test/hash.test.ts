@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdir, mkdtemp, rename, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hashFolder } from "../src/hash.ts";
@@ -54,6 +54,14 @@ describe("hashFolder", () => {
 		await Bun.write(join(dir, ".git", "HEAD"), "ref: refs/heads/main");
 		expect(await hashFolder(dir)).toBe(before);
 		await rm(join(dir, ".git"), { recursive: true });
+	});
+
+	test("rejects symlinked files", async () => {
+		const dir = await makeDir(SKILL);
+		const outside = await mkdtemp(join(tmpdir(), "gent-outside-"));
+		await Bun.write(join(outside, "secret"), "outside bytes");
+		await symlink(join(outside, "secret"), join(dir, "secret-link"));
+		expect(hashFolder(dir)).rejects.toThrow("symlinks are not allowed");
 	});
 
 	test("empty folder has a stable hash", async () => {
