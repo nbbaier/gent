@@ -11,4 +11,5 @@ A managed skill has exactly one real copy on disk, in the canonical store at `~/
 ## Consequences
 
 - The approach assumes holdout tools follow a symlinked skill _directory_ during discovery. This is verified by a spike before the rest is built; if a tool ignores symlinks, that specific holdout falls back to a copy.
+  - **Gate retired (2026-07-06).** Claude Code: probe-confirmed at both scopes via the isolation battery (`docs/agent-skill-resolution.md`). Factory droid (v0.164.0): end-to-end invocation probe passed — a uniquely-named skill symlinked into `~/.factory/skills` (sole real copy outside droid's roots) was invoked via `droid exec` and returned its secret token (`docs/skill-data.json`, observed). **No copy-fallback holdouts in v1.**
 - Choosing `.agents/skills` as the store (not a private dir) means the store is simultaneously the primary target — no extra copy or link for the majority case.
