@@ -107,4 +107,16 @@ describe("git resolver", () => {
 	test("unknown ref errors", async () => {
 		expect(resolveSource(gitRef({ ref: "does-not-exist" }))).rejects.toThrow();
 	});
+
+	// SourceRefs can come straight from manifest data, so the resolver must
+	// re-reject flag-like and traversal values itself (not rely on the parser).
+	test("rejects flag-like refs, urls, and traversal subpaths", async () => {
+		expect(resolveSource(gitRef({ ref: "--upload-pack=evil" }))).rejects.toThrow(
+			"must not start with '-'",
+		);
+		expect(
+			resolveSource({ kind: "git", url: "--upload-pack=evil", ref: null, subpath: null }),
+		).rejects.toThrow("must not start with '-'");
+		expect(resolveSource(gitRef({ subpath: "../outside" }))).rejects.toThrow("invalid subpath");
+	});
 });

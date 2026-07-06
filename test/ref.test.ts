@@ -72,3 +72,26 @@ describe("parseSourceRef — errors", () => {
 		expect(() => parseSourceRef(raw, opts)).toThrow("unrecognized source");
 	});
 });
+
+describe("parseSourceRef — argument injection", () => {
+	test("rejects refs that look like git flags", () => {
+		expect(() => parseSourceRef("github:o/r#--upload-pack=touch${IFS}pwned", opts)).toThrow(
+			"must not start with '-'",
+		);
+		expect(() => parseSourceRef("https://example.com/o/r.git#-b", opts)).toThrow(
+			"must not start with '-'",
+		);
+	});
+
+	test("rejects urls that look like git flags", () => {
+		expect(() => parseSourceRef("--upload-pack=evil.git", opts)).toThrow(
+			"must not start with '-'",
+		);
+	});
+
+	test("rejects subpath traversal and flag-like segments", () => {
+		expect(() => parseSourceRef("github:o/r/../../../etc", opts)).toThrow("invalid subpath");
+		expect(() => parseSourceRef("github:o/r/skills/-flag", opts)).toThrow("invalid subpath");
+		expect(() => parseSourceRef("github:o/r/skills/./x", opts)).toThrow("invalid subpath");
+	});
+});

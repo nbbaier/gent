@@ -2,6 +2,7 @@ import { mkdtemp, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { walkFiles } from "../fs-util.ts";
+import { assertSafeGitRef } from "./ref.ts";
 import type { ResolvedSource, SourceRef } from "./types.ts";
 
 export interface GitResolveOptions {
@@ -14,6 +15,9 @@ async function git(args: string[], cwd?: string): Promise<string> {
 		cwd,
 		stdout: "pipe",
 		stderr: "pipe",
+		// Block transport helpers like ext:: that execute arbitrary commands;
+		// manifests are committed, so URLs are not always the local user's own.
+		env: { ...process.env, GIT_ALLOW_PROTOCOL: "file:git:http:https:ssh" },
 	});
 	const [stdout, stderr, code] = await Promise.all([
 		new Response(proc.stdout).text(),
@@ -38,6 +42,7 @@ export async function resolveGit(
 	ref: Extract<SourceRef, { kind: "git" }>,
 	opts: GitResolveOptions = {},
 ): Promise<ResolvedSource> {
+	assertSafeGitRef(ref);
 	const checkout = opts.workDir ?? (await mkdtemp(join(tmpdir(), "gent-git-")));
 	await git(["init", "-q", checkout]);
 	await git(["remote", "add", "origin", ref.url], checkout);
