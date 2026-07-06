@@ -17,7 +17,7 @@ Issues live in GitHub Issues (nbbaier/gent); external PRs are not treated as a t
 
 ### Triage labels
 
-Default label vocabulary (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix) — none exist yet except `wontfix`. See `docs/agents/triage-labels.md`.
+Default label vocabulary (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix) is installed in GitHub Issues. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
