@@ -96,7 +96,10 @@ describe("detectInstalledTools", () => {
 describe("resolveTargets", () => {
 	const claudeCode = tools.find((t) => t.id === "claude-code")!;
 	const droid = tools.find((t) => t.id === "droid")!;
-	const amp = tools.find((t) => t.id === "amp")!;
+	const holdoutIds = tools
+		.filter((t) => t.holdout !== null)
+		.map((t) => t.id)
+		.sort();
 
 	test("returns detected holdouts as-is with no targets", () => {
 		const result = resolveTargets([claudeCode]);
@@ -114,7 +117,18 @@ describe("resolveTargets", () => {
 	});
 
 	test("exclude wins over add for the same id", () => {
-		const result = resolveTargets([claudeCode], { add: ["amp"], exclude: ["amp"] });
+		const result = resolveTargets([claudeCode], { add: ["droid"], exclude: ["droid"] });
+		expect(result.map((t) => t.id)).toEqual(["claude-code"]);
+	});
+
+	test("throws when targets.add names a known non-holdout tool", () => {
+		expect(() => resolveTargets([], { add: ["amp"] })).toThrow(
+			`invalid target 'amp' — not a holdout tool; holdout targets: ${holdoutIds.join(", ")}`,
+		);
+	});
+
+	test("targets.exclude accepts a known non-holdout id as a no-op", () => {
+		const result = resolveTargets([claudeCode], { exclude: ["amp"] });
 		expect(result.map((t) => t.id)).toEqual(["claude-code"]);
 	});
 

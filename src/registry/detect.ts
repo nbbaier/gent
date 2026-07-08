@@ -28,11 +28,19 @@ export function detectInstalledTools(opts: DetectOptions = {}): ToolSpec[] {
 
 /**
  * Effective holdout set: detected holdout tools, plus manifest targets.add
- * ids, minus targets.exclude ids. Unknown ids throw.
+ * ids, minus targets.exclude ids. Unknown ids throw. targets.add also
+ * rejects known non-holdout ids — such a tool has no holdout dirs to link
+ * into, so downstream materialization would crash or silently no-op.
+ * targets.exclude stays permissive for any known id (excluding a
+ * non-holdout is a harmless no-op).
  */
 export function resolveTargets(detected: ToolSpec[], targets?: Targets): ToolSpec[] {
 	const byId = new Map(tools.map((t) => [t.id, t]));
 	const knownIds = [...byId.keys()].sort();
+	const holdoutIds = tools
+		.filter((t) => t.holdout !== null)
+		.map((t) => t.id)
+		.sort();
 
 	function lookup(id: string): ToolSpec {
 		const tool = byId.get(id);
@@ -53,6 +61,11 @@ export function resolveTargets(detected: ToolSpec[], targets?: Targets): ToolSpe
 
 	for (const id of targets?.add ?? []) {
 		const tool = lookup(id);
+		if (tool.holdout === null) {
+			throw new Error(
+				`invalid target '${id}' — not a holdout tool; holdout targets: ${holdoutIds.join(", ")}`,
+			);
+		}
 		if (excluded.has(tool.id)) continue;
 		result.set(tool.id, tool);
 	}

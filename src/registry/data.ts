@@ -201,7 +201,12 @@ export const tools: ToolSpec[] = [
 			configDirs: [".opencode", ".config/opencode"],
 			appPaths: [],
 		},
-		globalRoots: [".config/opencode/skills", ".opencode/skills", ".claude/skills", ".agents/skills"],
+		// First = preferred. Observed same-level collision precedence (probed
+		// 2026-07-05): .agents/skills > .opencode/skills > .claude/skills. The
+		// relative rank of .config/opencode vs .opencode wasn't probe-
+		// distinguished — both are the "opencode flavor" between .agents and
+		// .claude.
+		globalRoots: [".agents/skills", ".config/opencode/skills", ".opencode/skills", ".claude/skills"],
 		projectFlavors: [
 			// Walk-up is git-root-bounded, inclusive.
 			{ dir: ".opencode/skills", walkUp: "git-root" },
