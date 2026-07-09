@@ -128,6 +128,45 @@ describe("materializeSkill", () => {
 		expect(await exists(storeDir)).toBe(false);
 	});
 
+	test("a wrong expectHash preserves an existing store entry and its holdout link", async () => {
+		const srcDir = await makeDir(SKILL);
+		const placement = await makePlacement(1);
+		await materializeSkill({ name: "x", srcDir, placement });
+		const storeDir = join(placement.storeRoot, "x");
+		const linkPath = join(placement.holdoutDirs[0] as string, "x");
+		const originalHash = await hashFolder(storeDir);
+
+		await Bun.write(join(srcDir, "assets", "a.txt"), "changed");
+		await expect(
+			materializeSkill({
+				name: "x",
+				srcDir,
+				placement,
+				expectHash: `sha256:${"0".repeat(64)}`,
+			}),
+		).rejects.toThrow(/hash mismatch/);
+
+		expect(await hashFolder(storeDir)).toBe(originalHash);
+		expect(await readlink(linkPath)).toBe(storeDir);
+	});
+
+	test("rejects names that could escape managed directories", async () => {
+		const srcDir = await makeDir(SKILL);
+		const placement = await makePlacement(1);
+		const sentinel = join(placement.storeRoot, "..", "keep.txt");
+		await Bun.write(sentinel, "do not delete");
+
+		for (const name of ["..", "x/../../../outside", "x\\..\\outside"]) {
+			await expect(materializeSkill({ name, srcDir, placement })).rejects.toThrow(
+				"invalid skill name",
+			);
+			await expect(dematerializeSkill({ name, placement })).rejects.toThrow("invalid skill name");
+			await expect(repairLinks({ name, placement })).rejects.toThrow("invalid skill name");
+		}
+
+		expect(await Bun.file(sentinel).text()).toBe("do not delete");
+	});
+
 	test("leaves a pre-existing real directory at a holdout path untouched and reports a conflict", async () => {
 		const srcDir = await makeDir(SKILL);
 		const placement = await makePlacement(1);

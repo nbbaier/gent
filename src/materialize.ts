@@ -44,6 +44,13 @@ async function pathExists(path: string): Promise<boolean> {
 	}
 }
 
+/** Reject names that could escape a skill directory when joined into a path. */
+function assertSkillName(name: string): void {
+	if (!name || name === "." || name === ".." || name.includes("/") || name.includes("\\")) {
+		throw new Error(`materialize: invalid skill name '${name}'`);
+	}
+}
+
 /** True when `target` is storeRoot itself or nested under it (boundary-safe string prefix, not realpath — rule 5). */
 function isUnderStore(target: string, storeRoot: string): boolean {
 	const prefix = storeRoot.endsWith(sep) ? storeRoot : storeRoot + sep;
@@ -102,6 +109,7 @@ export async function materializeSkill(opts: {
 	expectHash?: string;
 }): Promise<MaterializeReport> {
 	const { name, srcDir, placement, expectHash } = opts;
+	assertSkillName(name);
 
 	// Validates the source tree (throws on symlinks in source trees, rule 1).
 	await walkFiles(srcDir);
@@ -110,6 +118,15 @@ export async function materializeSkill(opts: {
 	const tmp = join(placement.storeRoot, `.tmp-${name}-${process.pid}`);
 	await rm(tmp, { recursive: true, force: true });
 	await cp(srcDir, tmp, { recursive: true });
+	if (expectHash !== undefined) {
+		const actual = await hashFolder(tmp);
+		if (actual !== expectHash) {
+			await rm(tmp, { recursive: true, force: true });
+			throw new Error(
+				`materialize: hash mismatch for skill '${name}': expected ${expectHash}, got ${actual}`,
+			);
+		}
+	}
 
 	// Atomic replace: build the new entry alongside, then swap it in under
 	// the final name so a crash never leaves a half-written store entry
@@ -117,16 +134,6 @@ export async function materializeSkill(opts: {
 	const storeDir = join(placement.storeRoot, name);
 	await rm(storeDir, { recursive: true, force: true });
 	await rename(tmp, storeDir);
-
-	if (expectHash !== undefined) {
-		const actual = await hashFolder(storeDir);
-		if (actual !== expectHash) {
-			await rm(storeDir, { recursive: true, force: true });
-			throw new Error(
-				`materialize: hash mismatch for skill '${name}': expected ${expectHash}, got ${actual}`,
-			);
-		}
-	}
 
 	const { linked, conflicts } = await linkHoldouts(storeDir, name, placement.holdoutDirs);
 	return { store: storeDir, linked, conflicts };
@@ -143,6 +150,7 @@ export async function dematerializeSkill(opts: {
 	placement: Placement;
 }): Promise<DematerializeReport> {
 	const { name, placement } = opts;
+	assertSkillName(name);
 	const unlinked: string[] = [];
 	const conflicts: string[] = [];
 
@@ -182,6 +190,7 @@ export async function repairLinks(opts: {
 	placement: Placement;
 }): Promise<MaterializeReport> {
 	const { name, placement } = opts;
+	assertSkillName(name);
 	const storeDir = join(placement.storeRoot, name);
 	if (!(await pathExists(storeDir))) {
 		throw new Error(`materialize: no store entry for skill '${name}' at ${storeDir}`);
