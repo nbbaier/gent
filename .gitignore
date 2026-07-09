@@ -1,3 +1,36 @@
+# Ignore log files and logs directory
+*.log
+logs/
+_.log
+
+# Node build
 node_modules/
 dist/
+out/
+coverage/
+*.tsbuildinfo
+*.tgz
+*.lcov
+
+# Editor & tool settings
+.idea/
+.cache/
+.eslintcache
+
+# Cursor specific
+.cursor/hooks/state/continual-learning*
+
+# Claude settings & worktrees
+.claude/settings.local.json
+.claude/worktrees
+
+# OS generated files
 .DS_Store
+
+# Environment variables & test env
+.env
+.env.local
+.env.*.local
+
+# Ignore coverage reports with specific named pattern
+report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
