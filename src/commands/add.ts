@@ -1,3 +1,5 @@
+import { lstat } from "node:fs/promises";
+import { join } from "node:path";
 import type { Command } from "../commands.ts";
 import type { DiscoveredSkill } from "../discovery.ts";
 import { discoverSkills } from "../discovery.ts";
@@ -88,6 +90,21 @@ export const addCommand: Command = {
 			return 1;
 		}
 
+		// Two discovered directories can declare the same frontmatter name; both
+		// would target the same store path, so the batch must fail before any write.
+		const seen = new Set<string>();
+		const duplicates = new Set<string>();
+		for (const s of selected) {
+			if (seen.has(s.name)) duplicates.add(s.name);
+			seen.add(s.name);
+		}
+		if (duplicates.size > 0) {
+			for (const name of duplicates) {
+				ctx.io.error(`gent add: multiple skills in '${raw}' share the name '${name}'`);
+			}
+			return 1;
+		}
+
 		const { path: manifestPath, manifest } = await loadGlobalManifest(ctx);
 
 		const collisions = selected.filter((s) => manifest.skills[s.name] !== undefined);
@@ -100,6 +117,26 @@ export const addCommand: Command = {
 		}
 
 		const placement = buildGlobalPlacement(ctx, manifest);
+
+		// A store entry with no manifest entry is unmanaged (e.g. a skill the
+		// user placed there by hand); materializeSkill would replace it, and
+		// unmanaged skills are never mutated. Preflight before any write.
+		let unmanaged = false;
+		for (const skill of selected) {
+			const storeDir = join(placement.storeRoot, skill.name);
+			const exists = await lstat(storeDir).then(
+				() => true,
+				() => false,
+			);
+			if (exists) {
+				unmanaged = true;
+				ctx.io.error(
+					`gent add: '${storeDir}' exists but is not managed by gent; move it aside or adopt it first`,
+				);
+			}
+		}
+		if (unmanaged) return 1;
+
 		const hashAt = raw.indexOf("#");
 		const source = ref.kind === "git" && hashAt !== -1 ? raw.slice(0, hashAt) : raw;
 		const declaredRef = ref.kind === "git" ? (ref.ref ?? undefined) : undefined;

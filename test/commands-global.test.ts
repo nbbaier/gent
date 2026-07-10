@@ -231,6 +231,69 @@ describe("gent add (local source)", () => {
 		expect(manifest?.skills.alpha?.source).toBe("github:existing/repo");
 	});
 
+	test("an unmanaged store entry with the same name blocks the add and is left untouched", async () => {
+		const home = await tmpHome();
+		// A skill placed in the store by hand, absent from any manifest.
+		const storeRoot = join(home, ".agents", "skills");
+		const unmanagedDir = await writeSkillDir(storeRoot, "alpha", "hand-installed");
+
+		const sourceDir = await mkdtemp(join(tmpdir(), "gent-src-"));
+		const skillDir = await writeSkillDir(sourceDir, "alpha", "managed candidate");
+
+		const { io, out, err } = captureIo();
+		const code = await run(["add", skillDir], io, ctxFor(home));
+
+		expect(code).toBe(1);
+		expect(out).toEqual([]);
+		expect(err).toEqual([
+			`gent add: '${join(storeRoot, "alpha")}' exists but is not managed by gent; move it aside or adopt it first`,
+		]);
+
+		expect(await Bun.file(join(unmanagedDir, "SKILL.md")).text()).toContain("hand-installed");
+		expect(await readManifest(globalManifestPath({ HOME: home }))).toBeNull();
+	});
+
+	test("an unmanaged store entry inside an --all batch blocks the whole batch", async () => {
+		const home = await tmpHome();
+		const storeRoot = join(home, ".agents", "skills");
+		await writeSkillDir(storeRoot, "alpha", "hand-installed");
+
+		const sourceDir = await mkdtemp(join(tmpdir(), "gent-src-"));
+		await writeSkillDir(sourceDir, "alpha");
+		await writeSkillDir(sourceDir, "beta");
+
+		const { io, err } = captureIo();
+		const code = await run(["add", sourceDir, "--all"], io, ctxFor(home));
+
+		expect(code).toBe(1);
+		expect(err.join("\n")).toContain("not managed by gent");
+
+		const betaStore = join(storeRoot, "beta");
+		expect(await lstat(betaStore).catch(() => null)).toBeNull();
+		expect(await readManifest(globalManifestPath({ HOME: home }))).toBeNull();
+	});
+
+	test("two discovered skills sharing a frontmatter name error before anything is written", async () => {
+		const home = await tmpHome();
+		const sourceDir = await mkdtemp(join(tmpdir(), "gent-src-"));
+		// Distinct directories, identical frontmatter name.
+		await mkdir(join(sourceDir, "one"), { recursive: true });
+		await Bun.write(join(sourceDir, "one", "SKILL.md"), "---\nname: alpha\n---\nfirst\n");
+		await mkdir(join(sourceDir, "two"), { recursive: true });
+		await Bun.write(join(sourceDir, "two", "SKILL.md"), "---\nname: alpha\n---\nsecond\n");
+
+		const { io, out, err } = captureIo();
+		const code = await run(["add", sourceDir, "--all"], io, ctxFor(home));
+
+		expect(code).toBe(1);
+		expect(out).toEqual([]);
+		expect(err).toEqual([`gent add: multiple skills in '${sourceDir}' share the name 'alpha'`]);
+
+		const storeDir = join(home, ".agents", "skills", "alpha");
+		expect(await lstat(storeDir).catch(() => null)).toBeNull();
+		expect(await readManifest(globalManifestPath({ HOME: home }))).toBeNull();
+	});
+
 	test("a collision inside an --all batch blocks the whole batch (all-or-nothing)", async () => {
 		const home = await tmpHome();
 		const manifestPath = globalManifestPath({ HOME: home });
@@ -344,6 +407,26 @@ describe("gent add (git source)", () => {
 
 		const storeDir = join(home, ".agents", "skills", "gitskill");
 		expect(await Bun.file(join(storeDir, "SKILL.md")).text()).toContain("v1");
+	});
+});
+
+describe("run() error handling", () => {
+	test("an operational failure becomes a formatted command error with exit 1", async () => {
+		const home = await tmpHome();
+		// A regular file where the store root belongs makes materialization's
+		// mkdir reject — an operational failure, not a usage error.
+		await mkdir(join(home, ".agents"), { recursive: true });
+		await Bun.write(join(home, ".agents", "skills"), "not a directory");
+
+		const sourceDir = await mkdtemp(join(tmpdir(), "gent-src-"));
+		const skillDir = await writeSkillDir(sourceDir, "alpha");
+
+		const { io, err } = captureIo();
+		const code = await run(["add", skillDir], io, ctxFor(home));
+
+		expect(code).toBe(1);
+		expect(err.length).toBe(1);
+		expect(err[0]).toStartWith("gent add: ");
 	});
 });
 

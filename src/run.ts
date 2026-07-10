@@ -44,5 +44,12 @@ export async function run(
 	const env = ctx.env ?? process.env;
 	const cwd = ctx.cwd ?? process.cwd();
 	const interactive = ctx.interactive ?? Boolean(process.stdin.isTTY && process.stdout.isTTY);
-	return command.run({ args: rest, io, env, cwd, interactive });
+	try {
+		return await command.run({ args: rest, io, env, cwd, interactive });
+	} catch (err) {
+		// Operational failures (manifest IO, discovery, hashing, materialization)
+		// become command errors rather than escaping to the CLI entry point.
+		io.error(`gent ${command.name}: ${err instanceof Error ? err.message : String(err)}`);
+		return 1;
+	}
 }
