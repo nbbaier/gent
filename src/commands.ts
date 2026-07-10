@@ -1,8 +1,14 @@
+import { addCommand } from "./commands/add.ts";
+import { listCommand } from "./commands/list.ts";
+import { removeCommand } from "./commands/remove.ts";
 import type { Io } from "./io.ts";
 
 export interface CommandContext {
 	args: string[];
 	io: Io;
+	env: Record<string, string | undefined>;
+	cwd: string;
+	interactive: boolean;
 }
 
 export interface Command {
@@ -25,11 +31,11 @@ function stub(name: string, aliases: string[], summary: string): Command {
 }
 
 export const commands: Command[] = [
-	stub("add", ["a", "install", "i"], "Add skills from a source to a manifest and materialize them"),
-	stub("remove", ["rm", "r", "uninstall"], "Remove a managed skill from the manifest and disk"),
+	addCommand,
+	removeCommand,
 	stub("sync", [], "Reconcile disk to the manifest (materialize, repair, warn on drift)"),
 	stub("update", [], "Re-resolve branch/tag refs and re-materialize"),
-	stub("list", ["ls"], "List managed skills"),
+	listCommand,
 	stub("adopt", [], "Pull an unmanaged skill into the manifest"),
 ];
 

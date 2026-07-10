@@ -1,15 +1,19 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { commands, resolveCommand } from "../src/commands.ts";
 import { run, usage } from "../src/run.ts";
 import type { Io } from "../src/io.ts";
 import pkg from "../package.json";
 
-function captureIo() {
+function captureIo(answers: string[] = []) {
 	const out: string[] = [];
 	const err: string[] = [];
 	const io: Io = {
 		print: (line) => out.push(line),
 		error: (line) => err.push(line),
+		ask: async () => answers.shift() ?? "",
 	};
 	return { io, out, err };
 }
@@ -76,9 +80,13 @@ describe("run", () => {
 	});
 
 	test("aliases dispatch to the canonical command", async () => {
-		const { io, err } = captureIo();
-		expect(await run(["ls"], io)).toBe(1);
-		expect(err).toEqual(["gent list: not implemented yet"]);
+		// list/ls is a real command now (#9); a fresh HOME keeps this test off the
+		// real global manifest while still proving run() dispatches by alias.
+		const home = await mkdtemp(join(tmpdir(), "gent-run-alias-"));
+		const { io, out, err } = captureIo();
+		expect(await run(["ls"], io, { env: { HOME: home }, cwd: home, interactive: false })).toBe(0);
+		expect(err).toEqual([]);
+		expect(out).toEqual(["no managed skills"]);
 	});
 
 	test("usage lists every command with its aliases", () => {

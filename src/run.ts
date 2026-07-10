@@ -1,4 +1,4 @@
-import { commands, resolveCommand } from "./commands.ts";
+import { commands, resolveCommand, type CommandContext } from "./commands.ts";
 import { defaultIo, type Io } from "./io.ts";
 import pkg from "../package.json";
 
@@ -19,7 +19,11 @@ export function usage(): string {
 	].join("\n");
 }
 
-export async function run(argv: string[], io: Io = defaultIo): Promise<number> {
+export async function run(
+	argv: string[],
+	io: Io = defaultIo,
+	ctx: Partial<Pick<CommandContext, "env" | "cwd" | "interactive">> = {},
+): Promise<number> {
 	const [first, ...rest] = argv;
 
 	if (first === undefined || first === "-h" || first === "--help" || first === "help") {
@@ -37,5 +41,15 @@ export async function run(argv: string[], io: Io = defaultIo): Promise<number> {
 		io.error(usage());
 		return 1;
 	}
-	return command.run({ args: rest, io });
+	const env = ctx.env ?? process.env;
+	const cwd = ctx.cwd ?? process.cwd();
+	const interactive = ctx.interactive ?? Boolean(process.stdin.isTTY && process.stdout.isTTY);
+	try {
+		return await command.run({ args: rest, io, env, cwd, interactive });
+	} catch (err) {
+		// Operational failures (manifest IO, discovery, hashing, materialization)
+		// become command errors rather than escaping to the CLI entry point.
+		io.error(`gent ${command.name}: ${err instanceof Error ? err.message : String(err)}`);
+		return 1;
+	}
 }
