@@ -1,6 +1,8 @@
 import { addCommand } from "./commands/add.ts";
 import { listCommand } from "./commands/list.ts";
 import { removeCommand } from "./commands/remove.ts";
+import { syncCommand } from "./commands/sync.ts";
+import { updateCommand } from "./commands/update.ts";
 import type { Io } from "./io.ts";
 
 export interface CommandContext {
@@ -33,8 +35,8 @@ function stub(name: string, aliases: string[], summary: string): Command {
 export const commands: Command[] = [
 	addCommand,
 	removeCommand,
-	stub("sync", [], "Reconcile disk to the manifest (materialize, repair, warn on drift)"),
-	stub("update", [], "Re-resolve branch/tag refs and re-materialize"),
+	syncCommand,
+	updateCommand,
 	listCommand,
 	stub("adopt", [], "Pull an unmanaged skill into the manifest"),
 ];

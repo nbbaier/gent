@@ -1,9 +1,11 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { CommandContext } from "../commands.ts";
+import { discoverSkills, type DiscoveredSkill } from "../discovery.ts";
 import { emptyManifest, globalManifestPath, readManifest, writeManifest, type Manifest } from "../manifest.ts";
 import type { Placement } from "../materialize.ts";
 import { detectInstalledTools, resolveTargets } from "../registry/index.ts";
+import { parseSourceRef, resolveSource, type ResolvedSource, type SourceRef } from "../sources/index.ts";
 
 /** Same home-resolution pattern as globalManifestPath: injected env, never process globals. */
 export function resolveHome(env: Record<string, string | undefined>): string {
@@ -21,6 +23,43 @@ export async function loadGlobalManifest(
 
 export async function saveGlobalManifest(path: string, manifest: Manifest): Promise<void> {
 	await writeManifest(path, manifest);
+}
+
+export function reportHoldoutConflicts(
+	error: (line: string) => void,
+	conflicts: string[],
+): void {
+	for (const conflict of conflicts) {
+		error(`warning: '${conflict}' exists and is not gent's symlink; left untouched`);
+	}
+}
+
+export interface RefetchedSkill {
+	sourceRef: SourceRef;
+	resolved: ResolvedSource;
+	skill: DiscoveredSkill;
+}
+
+/** Resolve a manifest source again and select the named skill from it. */
+export async function refetchSkill(
+	entry: Manifest["skills"][string],
+	name: string,
+	opts: { cwd: string; home: string; gitRef?: string | null },
+): Promise<RefetchedSkill> {
+	const parsed = parseSourceRef(entry.source, { cwd: opts.cwd, home: opts.home });
+	const sourceRef =
+		parsed.kind === "git" && opts.gitRef !== undefined
+			? { ...parsed, ref: opts.gitRef }
+			: parsed;
+	const resolved = await resolveSource(sourceRef);
+	const matches = (await discoverSkills(resolved.root)).filter((skill) => skill.name === name);
+	if (matches.length === 0) {
+		throw new Error(`skill '${name}' not found in source '${entry.source}'`);
+	}
+	if (matches.length > 1) {
+		throw new Error(`source '${entry.source}' contains multiple skills named '${name}'`);
+	}
+	return { sourceRef, resolved, skill: matches[0] as DiscoveredSkill };
 }
 
 /**
