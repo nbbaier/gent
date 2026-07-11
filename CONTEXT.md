@@ -74,5 +74,7 @@ symlinks, warn on drift, prune managed orphans. Never changes which ref a skill 
 pinned to.
 
 **Update**:
-To move a skill's ref forward — re-resolve the ref, record the new hash, then
-re-materialize. Only meaningful for skills tracking a branch or tag.
+To refresh a managed skill from its declared source. For a skill tracking a Git
+branch or tag, re-resolve the ref; for a local source, re-read its current bytes.
+Record the new resolved state and content hash, then re-materialize. A skill
+pinned to a full Git commit SHA does not move.

@@ -73,10 +73,18 @@ describe("run", () => {
 		expect(err.join("\n")).toContain("Usage: gent <command>");
 	});
 
-	test("stub commands report not-implemented and exit 1", async () => {
-		const { io, err } = captureIo();
-		expect(await run(["sync"], io)).toBe(1);
-		expect(err).toEqual(["gent sync: not implemented yet"]);
+	test("sync on an empty home succeeds without touching the real home", async () => {
+		const home = await mkdtemp(join(tmpdir(), "gent-run-sync-"));
+		const { io, out, err } = captureIo();
+		expect(
+			await run(["sync"], io, {
+				env: { HOME: home, XDG_CONFIG_HOME: undefined },
+				cwd: home,
+				interactive: false,
+			}),
+		).toBe(0);
+		expect(out).toEqual([]);
+		expect(err).toEqual([]);
 	});
 
 	test("aliases dispatch to the canonical command", async () => {
