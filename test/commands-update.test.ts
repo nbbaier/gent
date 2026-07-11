@@ -210,7 +210,7 @@ describe("gent update", () => {
 		expect(out).toEqual([]);
 		expect(err).toHaveLength(1);
 		expect(err[0]).toContain("relative local source './alpha'");
-		expect(err[0]).toContain("re-add 'alpha'");
+		expect(err[0]).toContain("remove and re-add 'alpha' using its source path");
 		expect(
 			await Bun.file(join(home, ".agents", "skills", "alpha", "SKILL.md")).exists(),
 		).toBe(false);

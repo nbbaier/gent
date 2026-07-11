@@ -52,7 +52,7 @@ export function parseManifestSource(
 		entry.source.startsWith("../")
 	) {
 		throw new Error(
-			`relative local source '${entry.source}' has no stable base; re-add '${name}' to record its absolute path`,
+			`relative local source '${entry.source}' has no recorded base; remove and re-add '${name}' using its source path`,
 		);
 	}
 	return parseSourceRef(entry.source, opts);
