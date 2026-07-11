@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 export const MANIFEST_VERSION = 1;
 
 export interface SkillEntry {
-	/** The source reference as the user gave it (e.g. "github:owner/repo/skill"). */
+	/** Stable source reference; local sources are recorded as absolute paths. */
 	source: string;
 	/** Declared ref pin (branch, tag, or sha), when the user gave one. */
 	ref?: string;

@@ -3,10 +3,10 @@ import { join } from "node:path";
 import type { Command } from "../commands.ts";
 import { hashFolder } from "../hash.ts";
 import { materializeSkill } from "../materialize.ts";
-import { parseSourceRef } from "../sources/index.ts";
 import {
 	buildGlobalPlacement,
 	loadGlobalManifest,
+	parseManifestSource,
 	reportHoldoutConflicts,
 	refetchSkill,
 	resolveHome,
@@ -56,7 +56,7 @@ export const updateCommand: Command = {
 			const entry = manifest.skills[skillName];
 			if (!entry) continue;
 			try {
-				const source = parseSourceRef(entry.source, {
+				const source = parseManifestSource(entry, skillName, {
 					cwd: ctx.cwd,
 					home: resolveHome(ctx.env),
 				});

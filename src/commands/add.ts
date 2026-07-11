@@ -138,7 +138,8 @@ export const addCommand: Command = {
 		if (unmanaged) return 1;
 
 		const hashAt = raw.indexOf("#");
-		const source = ref.kind === "git" && hashAt !== -1 ? raw.slice(0, hashAt) : raw;
+		const source =
+			ref.kind === "local" ? ref.path : hashAt !== -1 ? raw.slice(0, hashAt) : raw;
 		const declaredRef = ref.kind === "git" ? (ref.ref ?? undefined) : undefined;
 
 		// Materialize first, write the manifest once at the end: a failure

@@ -5,10 +5,10 @@ import { hashFolder } from "../hash.ts";
 import type { Placement } from "../materialize.ts";
 import { materializeSkill, repairLinks } from "../materialize.ts";
 import type { Manifest } from "../manifest.ts";
-import { parseSourceRef } from "../sources/index.ts";
 import {
 	buildGlobalPlacement,
 	loadGlobalManifest,
+	parseManifestSource,
 	reportHoldoutConflicts,
 	refetchSkill,
 	resolveHome,
@@ -101,7 +101,10 @@ export const syncCommand: Command = {
 					}
 				}
 
-				const parsed = parseSourceRef(entry.source, { cwd: ctx.cwd, home: resolveHome(ctx.env) });
+				const parsed = parseManifestSource(entry, name, {
+					cwd: ctx.cwd,
+					home: resolveHome(ctx.env),
+				});
 				if (parsed.kind === "git" && !entry.resolvedRef) {
 					throw new Error(`cannot materialize '${name}': manifest entry has no resolved ref`);
 				}

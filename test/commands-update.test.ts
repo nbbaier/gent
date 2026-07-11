@@ -162,6 +162,60 @@ describe("gent update", () => {
 		expect(await Bun.file(manifestPath).text()).toBe(manifestAfterUpdate);
 	});
 
+	test("updates from the originally added relative source when run from another cwd", async () => {
+		const home = await tmpHome();
+		const addCwd = await mkdtemp(join(tmpdir(), "gent-update-add-cwd-"));
+		const sourceDir = join(addCwd, "alpha");
+		await mkdir(sourceDir, { recursive: true });
+		await Bun.write(join(sourceDir, "SKILL.md"), "---\nname: alpha\n---\noriginal v1\n");
+		expect(
+			await run(["add", "./alpha"], captureIo().io, { ...ctxFor(home), cwd: addCwd }),
+		).toBe(0);
+
+		await Bun.write(join(sourceDir, "SKILL.md"), "---\nname: alpha\n---\noriginal v2\n");
+		const updateCwd = await mkdtemp(join(tmpdir(), "gent-update-other-cwd-"));
+		const unrelatedDir = join(updateCwd, "alpha");
+		await mkdir(unrelatedDir, { recursive: true });
+		await Bun.write(join(unrelatedDir, "SKILL.md"), "---\nname: alpha\n---\nunrelated bytes\n");
+
+		const { io, out, err } = captureIo();
+		expect(
+			await run(["update", "alpha"], io, { ...ctxFor(home), cwd: updateCwd }),
+		).toBe(0);
+		expect(out).toEqual(["updated alpha"]);
+		expect(err).toEqual([]);
+		const storeFile = join(home, ".agents", "skills", "alpha", "SKILL.md");
+		expect(await Bun.file(storeFile).text()).toContain("original v2");
+		expect(await Bun.file(storeFile).text()).not.toContain("unrelated bytes");
+	});
+
+	test("rejects a legacy relative manifest source instead of resolving it from the command cwd", async () => {
+		const home = await tmpHome();
+		const updateCwd = await mkdtemp(join(tmpdir(), "gent-update-legacy-cwd-"));
+		const sourceDir = join(updateCwd, "alpha");
+		await mkdir(sourceDir, { recursive: true });
+		await Bun.write(join(sourceDir, "SKILL.md"), "---\nname: alpha\n---\nunrelated bytes\n");
+		const manifestPath = globalManifestPath({ HOME: home });
+		await writeManifest(manifestPath, {
+			version: 1,
+			skills: {
+				alpha: { source: "./alpha", hash: await hashFolder(sourceDir) },
+			},
+		});
+
+		const { io, out, err } = captureIo();
+		expect(
+			await run(["update", "alpha"], io, { ...ctxFor(home), cwd: updateCwd }),
+		).toBe(1);
+		expect(out).toEqual([]);
+		expect(err).toHaveLength(1);
+		expect(err[0]).toContain("relative local source './alpha'");
+		expect(err[0]).toContain("re-add 'alpha'");
+		expect(
+			await Bun.file(join(home, ".agents", "skills", "alpha", "SKILL.md")).exists(),
+		).toBe(false);
+	});
+
 	test("protects drifted store bytes until --force is supplied", async () => {
 		const home = await tmpHome();
 		const sourceParent = await mkdtemp(join(tmpdir(), "gent-update-source-"));

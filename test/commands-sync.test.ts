@@ -114,6 +114,49 @@ describe("gent sync", () => {
 		expect(await Bun.file(manifestPath).text()).toBe(manifestBefore);
 	});
 
+	test("materializes from the originally added relative source when run from another cwd", async () => {
+		const home = await tmpHome();
+		const addCwd = await mkdtemp(join(tmpdir(), "gent-sync-add-cwd-"));
+		await writeSkillDir(addCwd, "alpha", "original bytes");
+		expect(
+			await run(["add", "./alpha"], captureIo().io, { ...ctxFor(home), cwd: addCwd }),
+		).toBe(0);
+
+		const storeDir = join(home, ".agents", "skills", "alpha");
+		await rm(storeDir, { recursive: true, force: true });
+		const syncCwd = await mkdtemp(join(tmpdir(), "gent-sync-other-cwd-"));
+		const unrelatedDir = await writeSkillDir(syncCwd, "alpha", "unrelated bytes");
+
+		const { io, out, err } = captureIo();
+		expect(await run(["sync"], io, { ...ctxFor(home), cwd: syncCwd })).toBe(0);
+		expect(out).toEqual(["materialized alpha"]);
+		expect(err).toEqual([]);
+		expect(await Bun.file(join(storeDir, "SKILL.md")).text()).toContain("original bytes");
+		expect(await Bun.file(join(unrelatedDir, "SKILL.md")).text()).toContain("unrelated bytes");
+	});
+
+	test("rejects a legacy relative manifest source instead of materializing from the command cwd", async () => {
+		const home = await tmpHome();
+		const syncCwd = await mkdtemp(join(tmpdir(), "gent-sync-legacy-cwd-"));
+		const unrelatedDir = await writeSkillDir(syncCwd, "alpha", "unrelated bytes");
+		await writeManifest(globalManifestPath({ HOME: home }), {
+			version: 1,
+			skills: {
+				alpha: { source: "./alpha", hash: await hashFolder(unrelatedDir) },
+			},
+		});
+
+		const { io, out, err } = captureIo();
+		expect(await run(["sync"], io, { ...ctxFor(home), cwd: syncCwd })).toBe(1);
+		expect(out).toEqual([]);
+		expect(err).toHaveLength(1);
+		expect(err[0]).toContain("relative local source './alpha'");
+		expect(err[0]).toContain("re-add 'alpha'");
+		expect(
+			await Bun.file(join(home, ".agents", "skills", "alpha", "SKILL.md")).exists(),
+		).toBe(false);
+	});
+
 	test("materializes missing git content from the manifest's pinned commit", async () => {
 		const home = await tmpHome();
 		await mkdir(join(home, ".claude"), { recursive: true });

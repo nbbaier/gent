@@ -40,13 +40,31 @@ export interface RefetchedSkill {
 	skill: DiscoveredSkill;
 }
 
+export function parseManifestSource(
+	entry: Manifest["skills"][string],
+	name: string,
+	opts: { cwd: string; home: string },
+): SourceRef {
+	if (
+		entry.source === "." ||
+		entry.source === ".." ||
+		entry.source.startsWith("./") ||
+		entry.source.startsWith("../")
+	) {
+		throw new Error(
+			`relative local source '${entry.source}' has no stable base; re-add '${name}' to record its absolute path`,
+		);
+	}
+	return parseSourceRef(entry.source, opts);
+}
+
 /** Resolve a manifest source again and select the named skill from it. */
 export async function refetchSkill(
 	entry: Manifest["skills"][string],
 	name: string,
 	opts: { cwd: string; home: string; gitRef?: string | null },
 ): Promise<RefetchedSkill> {
-	const parsed = parseSourceRef(entry.source, { cwd: opts.cwd, home: opts.home });
+	const parsed = parseManifestSource(entry, name, { cwd: opts.cwd, home: opts.home });
 	const sourceRef =
 		parsed.kind === "git" && opts.gitRef !== undefined
 			? { ...parsed, ref: opts.gitRef }
