@@ -2,7 +2,7 @@
 
 An implementation plan for **gent**, a CLI that installs agent skills from common sources, keeps them synchronized, and places them where each agent tool looks — under one local management model the user controls.
 
-See [`CONTEXT.md`](../CONTEXT.md) for vocabulary and `docs/adr/` for the decisions behind the shape below.
+See [`GLOSSARY.md`](../GLOSSARY.md) for vocabulary and `docs/adr/` for the decisions behind the shape below.
 
 ## Design decisions (settled)
 
